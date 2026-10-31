@@ -4,14 +4,14 @@ Guidance for Claude when working in this repository.
 
 ## Project
 
-Pocket Muse: before you lose signal, a big cloud model (Muse Spark) teaches a tiny on-device model a "pack" for your trip (safety first, then practical notes, plus a forecast snapshot). Offline, a router answers in-pack questions on-device and queues the rest for when you're back online. Full idea, pitch and demo script are in `IDEAS.md`. Read it before making product decisions.
+Pocket Muse: Muse thinks ahead. From what's coming up in the user's days, a big cloud model (Muse Spark) predicts the questions they'll ask and teaches a tiny on-device model a "pack" (safety first, then practical notes for each plan, plus a forecast snapshot). In the moment, a router answers anticipated questions on-device (instant, free, works with no signal) and sends or queues the rest for big Muse. Full idea, pitch and demo script are in `IDEAS.md`. Read it before making product decisions.
 
 ## The goal is the demo
 
 Everything in this repo exists to produce a working MVP and a successful live demo. When deciding what to do, ask: "Does this make the demo work, or make it more convincing?" If not, skip it or note it as future work.
 
 The demo must show, end to end:
-1. A pack built from a plain-language plan (Muse plans, forecast, Q&A, training), with measured time and cost.
+1. A pack built from a plain-language description of the coming days (Muse anticipates, forecast, Q&A, training), with measured time and cost.
 2. Offline: safety and practical questions answered on-device; the forecast answered with its timestamp.
 3. Offline: out-of-pack or live questions queued, then answered by Muse after `/sync`.
 

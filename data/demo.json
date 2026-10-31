@@ -1,13 +1,9 @@
 {
-  "_note": "Stage script. Build the pack first with: uv run python pack.py \"<trip>\". eval.py checks every question takes the expected route.",
-  "trip": "Hiking in Yosemite Valley this weekend, there's no cell signal on the trails",
+  "_note": "Stage script. Build its pack with: uv run python pack.py --demo. eval.py checks every question takes the expected route.",
+  "plan": "Saturday morning I'm hiking on Mount Tamalpais, then kayaking out of Sausalito in the afternoon. Sunday dim sum with my parents at 11am in the Richmond District. Monday my flight leaves SFO at 6pm.",
   "script": [
     {
       "q": "There's a coyote on the trail right in front of me, what do I do?",
-      "route": "LOCAL_EDGE"
-    },
-    {
-      "q": "How do I signal for help with no cell signal?",
       "route": "LOCAL_EDGE"
     },
     {
@@ -15,11 +11,19 @@
       "route": "LOCAL_EDGE"
     },
     {
+      "q": "My kayak flipped, how do I stay afloat?",
+      "route": "LOCAL_EDGE"
+    },
+    {
+      "q": "What should I know about tides and currents out there?",
+      "route": "LOCAL_EDGE"
+    },
+    {
       "q": "What's the weather tomorrow?",
       "route": "LOCAL_EDGE"
     },
     {
-      "q": "Where should I store my food overnight?",
+      "q": "When should I leave for the airport on Monday?",
       "route": "LOCAL_EDGE"
     },
     {

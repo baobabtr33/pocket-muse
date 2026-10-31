@@ -85,11 +85,15 @@ class CloudModel:
             text = "".join(b.text for b in response.content if b.type == "text").strip()
         return CloudAnswer(text, response.usage.input_tokens, response.usage.output_tokens, self.provider)
 
-    def answer(self, question: str) -> CloudAnswer:
-        """Answer a user question; falls back to the disk cache if the call fails."""
+    def answer(self, question: str, context: str = "") -> CloudAnswer:
+        """Answer a user question; falls back to the disk cache if the call fails.
+
+        context: what Muse already knows about the user's coming days (it's their personal assistant).
+        """
         key = self.provider + ":" + " ".join(question.lower().split())
+        system = SYSTEM + (f"\n\nWhat you know about the user:\n{context}" if context else "")
         try:
-            result = self.complete(SYSTEM, question, max_tokens=4000)
+            result = self.complete(system, question, max_tokens=4000)
         except Exception:
             if key in self.cache:
                 return CloudAnswer(**self.cache[key], cached=True)

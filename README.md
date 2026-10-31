@@ -1,34 +1,67 @@
 # Pocket Muse
 
-**Pack an AI for the trip.** Cloud AI disappears when the signal does. Before you go offline, big Muse (Meta's Muse Spark, in the cloud) teaches a tiny on-device model exactly what you'll need, starting with how to stay safe. Then it runs on your laptop with Wi-Fi off.
+**Muse thinks ahead for you.** Tell Muse what's coming up. Overnight it predicts the questions you'll ask, safety first, and teaches a tiny model on your device to answer them. Answers are instant, private and free, and they still work with no signal.
 
 ```
-$ uv run python pack.py "Hiking in Yosemite Valley this weekend, no cell signal on the trails"
-✓ Pack: Yosemite Valley hiking weekend (16 note cards)
-   safety · Coyote & Mountain Lion Encounters
-   safety · Signaling for Help Without Cell Service
-   ...
-✓ Forecast snapshot: Saturday Oct 31: heavy rain, high 54°F ...
-✓ 400+ Q&A pairs from Muse
-Training Pocket Muse ━━━━━━━━━━━━━━━━━━━━ 120/120 steps
-✓ Pack ready
+$ uv run python pack.py --demo
+✓ Pack: Mt Tam hike, Sausalito kayak, Richmond dim sum and SFO flight (15 note cards)
+   safety · Wildlife: Mountain Lion, Coyote, Bobcat on Mt Tam
+   safety · Kayaking: Capsize and Cold Water Survival
+   safety · Tides, Currents, Wind and Boat Traffic
+   safety · Navigate Without Signal by Landmarks
+   ...    · (8 safety cards first, then 7 for the plans)
+✓ Forecast snapshot: Saturday Oct 31: rain, high 64°F (18°C), low 47°F (8°C) ...
+✓ 467 Q&A pairs from 19 Muse calls in 85s (est. $0.270)
+Training Pocket Muse ━━━━━━━━━━━━━━━━━━━━━━━━━━ 200/200 steps
+✓ Pack ready in 458s total (training 373s). Adapter: 23 MB on Llama 3.2 1B.
+
+$ uv run python demo.py --offline
+● offline > There's a coyote on the trail right in front of me, what do I do?
+POCKET MUSE · on-device | 0.64s | $0.0000
+Coyote is common dawn/dusk: Stop, wave arms, make loud noise, throw small rocks near not at it. Do not turn your back or run ...
+● offline > Which landmark should I look for to head south?
+POCKET MUSE · on-device | 0.38s | $0.0000
+Golden Gate Bridge is south of Sausalito, paddling away is north into Richardson Bay.
+● offline > What's the latest news?
+QUEUED · needs big Muse | No signal, and this isn't in your pack. Queued: I'll ask Muse when you're back online.
 ```
 
-Then, offline:
+Then, during your day:
 
-- **In the pack** (safety, places, rules, gear): answered on-device in about a second, for $0.
+- **Anticipated** (safety, your plans, places, timing): answered on-device in about a second, for $0, signal or not.
 - **Weather**: answered from the forecast snapshot, with the time it was fetched.
-- **Not in the pack, or live** (news, coding): queued, and sent to Muse when you're back online.
+- **Not anticipated, or live** (news, coding): sent to big Muse when online, queued when not.
 
 See [`IDEAS.md`](IDEAS.md) for the full idea, pitch and demo script.
 
 ## How it works
 
-1. **Plan.** Muse turns your plan into note cards from its own knowledge. Safety cards always come first: hazards for this activity with step-by-step responses, navigating by landmark, how to signal for help, first aid, emergency contacts.
-2. **Forecast.** A real forecast for the location from [Open-Meteo](https://open-meteo.com) (no key needed), stored with a timestamp.
+1. **Anticipate.** Muse reads what's coming up and writes note cards for the questions you're likely to ask. Safety cards always come first for anything risky: hazards with step-by-step responses (coyotes on the trail, staying afloat if your kayak flips, tides and currents), navigating by landmark, how to signal for help, first aid, emergency contacts. Then practical cards for each plan.
+2. **Forecast.** A real forecast for the area from [Open-Meteo](https://open-meteo.com) (no key needed), stored with a timestamp.
 3. **Teach.** Muse writes practice Q&A for every card in parallel, with 1.5x more for safety cards, plus questions the pack can't answer (so the model learns to say "That's not in your pack").
-4. **Distill.** LoRA fine-tune of Qwen2.5-0.5B-Instruct with MLX, then fused into one small model.
-5. **Answer offline.** A semantic router (bge-small embeddings, cosine similarity) decides: on-device, or queue for Muse. On-device answers get the most relevant pack notes in the prompt.
+4. **Distill.** LoRA fine-tune of Llama 3.2 1B Instruct (or 3B) with MLX, then fused into one small model.
+5. **Answer in the moment.** A semantic router (bge-small embeddings, cosine similarity) decides: on-device, or big Muse (queued if offline). On-device answers get the 4 most relevant pack facts in the prompt; the model was trained on exactly that retrieval, and says "That's not in your pack" when the facts don't answer the question.
+
+## Stack (all Meta open models, except the embedder)
+
+| Role | Model | Where |
+|---|---|---|
+| Teacher, and big Muse for queued questions | Muse Spark Open (`meta-models/muse-spark-open-1026`, 816B-A42B) via Baseten | cloud, while online |
+| Student ("Pocket Muse") | Llama 3.2 1B Instruct (default) or 3B, LoRA + fused, via MLX | on-device |
+| Router and retrieval | BAAI/bge-small-en-v1.5 | on-device, CPU |
+| Forecast | Open-Meteo API | fetched while online |
+
+## Measured results (stage pack, Llama 3.2 1B)
+
+From `eval.py` on 39 held-out practice questions (key terms from Muse's reference answer found in the answer; invented numbers = numbers that appear nowhere in the pack):
+
+| Setup | Key terms | Invented numbers | Says "not in pack" on off-pack questions | Latency |
+|---|---|---|---|---|
+| Pocket Muse (1B + pack) | 80% | 0/39 | 6/6 | 0.48s |
+| Llama 3.2 1B + same notes, untuned | 14% | 0/39 | 5/6 | 0.22s |
+| Llama 3.2 1B, no notes | 14% | 0/39 | 6/6 | 0.15s |
+
+Stage script: 8/8 routes correct, all on-device answers correct. Pack cost: about $0.27 of Muse tokens (estimate: tokens × list price) and about 6 minutes of training on an M4 Pro.
 
 ## Setup
 
@@ -42,9 +75,12 @@ cp .env.example .env   # add BASETEN_API_KEY (or export baseten_meta in your she
 ## Build a pack
 
 ```bash
-uv run python pack.py "Kayaking around Point Reyes on Saturday"
-uv run python pack.py "<plan>" --iters 80     # faster, less trained
-uv run python pack.py --retrain latest        # retrain an existing pack's dataset
+uv run python pack.py "Saturday hiking on Mount Tam, then kayaking out of Sausalito"
+uv run python pack.py --demo                  # the stage plan in data/demo.json
+uv run python pack.py --demo --student 3b     # Llama 3.2 3B student (default 1B)
+uv run python pack.py "<plan>" --iters 100    # faster, less trained
+uv run python pack.py --rebuild latest        # rewrite the dataset from the saved pack (no Muse calls) and retrain
+uv run python pack.py --retrain latest        # retrain on the existing dataset
 ```
 
 Packs go to `artifacts/packs/<name>/` (gitignored): `pack.json` (notes and build stats), `pairs.json` (Q&A), `dataset/`, `adapters/`, `fused/`.

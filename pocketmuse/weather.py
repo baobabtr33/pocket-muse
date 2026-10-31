@@ -47,15 +47,18 @@ def forecast_card(name: str, lat: float, lon: float, start: date, days: int) -> 
 
     fetched = datetime.now().strftime("%a %b %-d, %-I:%M %p")
     facts = [f"Forecast for {name}, fetched {fetched}. It cannot update while offline."]
+    days = []
     for i, day in enumerate(daily["time"]):
         d = date.fromisoformat(day)
         hi, lo = daily["temperature_2m_max"][i], daily["temperature_2m_min"][i]
         rain = daily["precipitation_probability_max"][i]
         rain = "unknown" if rain is None else f"{rain}%"
         sunset = datetime.fromisoformat(daily["sunset"][i]).strftime("%-I:%M %p")
-        facts.append(
+        text = (
             f"{d.strftime('%A %b %-d')}: {WMO.get(daily['weather_code'][i], 'mixed')}, "
             f"high {_f(hi)}°F ({hi:.0f}°C), low {_f(lo)}°F ({lo:.0f}°C), "
             f"{rain} chance of precipitation, sunset {sunset}."
         )
-    return {"title": "Weather forecast", "facts": facts, "kind": "forecast", "fetched": fetched}
+        days.append({"date": day, "text": text})
+        facts.append(text[:-1] + f" (forecast as of {fetched}).")
+    return {"title": "Weather forecast", "facts": facts, "kind": "forecast", "fetched": fetched, "days": days}

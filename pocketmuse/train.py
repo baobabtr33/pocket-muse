@@ -1,6 +1,7 @@
 """LoRA-train the student on a pack's dataset with mlx-lm. The adapter is the pack.
 
-Lesson from the campus version: lr 1e-4 collapsed this 0.5B model into repeating "!!!!".
+Lessons (Qwen2.5-0.5B, first student): lr 1e-4 (batch 8) and 5e-5 (batch 4) diverged around step 100 into
+garbage; 2e-5 was stable.
 """
 
 import re
@@ -8,18 +9,17 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .config import STUDENT_BASE_MODEL
 
 
-def train(pack_dir: Path, iters: int = 120, lr: float = 5e-5, on_iter=None) -> None:
+def train(pack_dir: Path, base: str, iters: int = 200, lr: float = 2e-5, on_iter=None) -> None:
     cmd = [
         sys.executable, "-m", "mlx_lm", "lora",
-        "--model", STUDENT_BASE_MODEL,
+        "--model", base,
         "--train",
         "--data", str(pack_dir / "dataset"),
         "--fine-tune-type", "lora",
         "--num-layers", "-1",
-        "--batch-size", "8",
+        "--batch-size", "4",  # batch 8 was ~2x slower per step with these long prompts
         "--iters", str(iters),
         "--learning-rate", str(lr),
         "--mask-prompt",
@@ -43,11 +43,11 @@ def train(pack_dir: Path, iters: int = 120, lr: float = 5e-5, on_iter=None) -> N
         raise RuntimeError(f"training failed, see {pack_dir / 'train.log'}")
 
 
-def fuse(pack_dir: Path) -> None:
+def fuse(pack_dir: Path, base: str) -> None:
     """Merge the adapter into a standalone model; generation is about 2x faster than adapter-on-the-fly."""
     cmd = [
         sys.executable, "-m", "mlx_lm", "fuse",
-        "--model", STUDENT_BASE_MODEL,
+        "--model", base,
         "--adapter-path", str(pack_dir / "adapters"),
         "--save-path", str(pack_dir / "fused"),
     ]

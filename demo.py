@@ -46,13 +46,19 @@ class Session:
         with console.status("Loading Pocket Muse..."):
             encoder = load_encoder()
             self.pack = Pack(resolve(pack_name), encoder)
-            self.router = Router(encoder, self.pack.train_questions())
+            self.router = Router(encoder, self.pack.local_examples())
             self.edge = EdgeModel(self.pack)
             self.cloud = CloudModel()
         self.online = not offline
         self.base = None  # loaded on first /compare
         self.queue: list[str] = []
         self.log = []  # (route, seconds, cost)
+        loc = (self.pack.meta.get("location") or {}).get("name", "unknown")
+        forecast = " ".join(f for c in self.pack.cards if c["kind"] == "forecast" for f in c["facts"])
+        self.context = (
+            f"Today is {time.strftime('%A, %B %-d')}. Their plans: {self.pack.meta['plan']} Location: {loc}. "
+            f"Forecast you fetched for them: {forecast or 'none'}"
+        )
 
     def status(self) -> str:
         return "[green]● online[/]" if self.online else "[red]● offline[/]"
@@ -82,7 +88,7 @@ class Session:
             self._panel(Text(msg), "yellow", "QUEUED · needs big Muse", seconds, 0.0, decision, route_ms)
             return
         try:
-            ans = self.cloud.answer(question)
+            ans = self.cloud.answer(question, self.context)
             text, cost = ans.text, ans.cost
             label = f"CLOUD · {self.cloud.spec['label']}" + (" (cached)" if ans.cached else "")
         except Exception as e:  # network gone mid-demo: queue instead of crashing
@@ -111,7 +117,7 @@ class Session:
             console.print(f"[bold cyan]> [/]{q}")
             t0 = time.perf_counter()
             try:
-                ans = self.cloud.answer(q)
+                ans = self.cloud.answer(q, self.context)
             except Exception as e:
                 self.queue.append(q)
                 console.print(f"[red]failed ({type(e).__name__}), kept in queue[/]")

@@ -12,8 +12,12 @@ ARTIFACTS = ROOT / "artifacts"
 PACKS_DIR = ARTIFACTS / "packs"
 CLOUD_CACHE_FILE = ARTIFACTS / "cloud_cache.json"
 
-# Student: an already-small open-weight model. Each pack is a LoRA adapter on top of it.
-STUDENT_BASE_MODEL = "mlx-community/Qwen2.5-0.5B-Instruct-bf16"
+# Students: Meta's small open Llama 3.2 models. Each pack is a LoRA adapter on one of them, fused.
+STUDENTS = {
+    "1b": "mlx-community/Llama-3.2-1B-Instruct-bf16",  # default: fast enough to train live on stage
+    "3b": "mlx-community/Llama-3.2-3B-Instruct-bf16",  # better answers, slower to train
+}
+DEFAULT_STUDENT = "1b"
 # Router and pack retrieval embeddings.
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"
 
@@ -21,8 +25,8 @@ EMBED_MODEL = "BAAI/bge-small-en-v1.5"
 # Pick with CLOUD_PROVIDER=baseten|anthropic. Prices are USD per million tokens; reasoning bills as output.
 CLOUD_PROVIDERS = {
     "baseten": {
-        "label": "Muse Spark",
-        "model": "meta-models/muse-spark-open-1026",  # hackathon key only works with this exact name
+        "label": "Muse Spark Open",
+        "model": "meta-models/muse-spark-open-1026",  # open Muse Spark (816B-A42B); the hackathon key only accepts this ID
         "base_url": "https://inference.baseten.co/v1",
         "key_env": ["baseten_meta", "BASETEN_API_KEY"],
         "price_per_mtok": {"input": 1.25, "output": 4.25},  # from Baseten /v1/models pricing, 2026-10-29
@@ -43,10 +47,11 @@ NOT_IN_PACK = "That's not in your pack"
 def student_system_prompt(pack_title: str, today: str, notes: str) -> str:
     """Training and inference must use this exact format."""
     return (
-        f"You are Pocket Muse, an offline assistant packed for: {pack_title}. Today is {today}.\n"
+        f"You are Pocket Muse, the on-device part of Muse. Muse prepared you ahead for: {pack_title}. "
+        f"Today is {today}.\n"
         "Answer in 1-2 short sentences using only the pack notes below. "
         f"If the notes do not answer the question, say \"{NOT_IN_PACK}\" and that you will ask Muse "
-        "when you're back online.\n\n"
+        "when you're online.\n\n"
         f"Pack notes:\n{notes}"
     )
 

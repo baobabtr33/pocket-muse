@@ -48,11 +48,12 @@ def main():
     ap.add_argument("--pack")
     ap.add_argument("-n", type=int, default=40, help="held-out questions to answer")
     ap.add_argument("--no-base", action="store_true")
+    ap.add_argument("--routing-only", action="store_true")
     args = ap.parse_args()
 
     encoder = load_encoder()
     pack = Pack(resolve(args.pack), encoder)
-    router = Router(encoder, pack.train_questions())
+    router = Router(encoder, pack.local_examples())
     demo = json.loads(DEMO_FILE.read_text())
     valid = [p for p in pack.pairs if p["split"] == "valid"]
     print(f"Pack: {pack.title} ({pack.path.name})\n")
@@ -73,6 +74,9 @@ def main():
     for group, oks in by_set.items():
         note = "  (local is fine here: the model should say it's not in the pack)" if group == "gap" else ""
         print(f"Routing {group:8} {sum(oks)}/{len(oks)}{note}")
+
+    if args.routing_only:
+        return
 
     # Answers
     pack_text = " ".join(format_card(c) for c in pack.cards)

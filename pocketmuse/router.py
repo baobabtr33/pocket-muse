@@ -28,7 +28,7 @@ class Decision:
 
 
 class Router:
-    def __init__(self, encoder, local_examples: list[str], threshold: float = 0.72, margin: float = 0.05):
+    def __init__(self, encoder, local_examples: list[str], threshold: float = 0.70, margin: float = 0.08):
         self.threshold, self.margin, self.encoder = threshold, margin, encoder
         routes = json.loads(ROUTES_FILE.read_text())
         self.examples = {LOCAL: routes[LOCAL] + local_examples, CLOUD: routes[CLOUD]}

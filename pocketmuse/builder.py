@@ -1,7 +1,8 @@
-"""Build a pack: big Muse writes notes and practice Q&A for a trip, then the student trains on them.
+"""Build a pack: big Muse thinks ahead about your coming days and teaches the small model to answer.
 
-Steps (all while online):
-  1. plan     - Muse turns the user's plan into ~16 note cards from its own knowledge.
+Steps (while online, e.g. overnight on the charger):
+  1. plan     - Muse reads what's coming up and writes ~16 note cards for the questions you're likely
+                to ask, safety first for anything risky.
   2. forecast - real forecast snapshot from Open-Meteo, as one more card.
   3. teach    - Muse writes practice Q&A for every card, in parallel.
   4. dataset  - Q&A become chat examples with the source card in the prompt (facts in context,
@@ -16,46 +17,55 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 
 from .cloud import CloudModel
-from .config import NOT_IN_PACK, PACKS_DIR, format_card, student_system_prompt
+from .config import NOT_IN_PACK, PACKS_DIR, STUDENTS, format_card, student_system_prompt
+from .pack import FactIndex
+from .router import load_encoder
 from .weather import forecast_card, geocode
 
-PLAN_PROMPT = """Today is {today}. The user is about to lose internet access. Their plan: "{plan}"
+PLAN_PROMPT = """Today is {today}. Here is what's coming up for the user, in their words: "{plan}"
 
-You are packing a tiny offline assistant for them. It will only know what you write now.
+You are Muse, their personal assistant, thinking ahead. Predict the questions they will ask over
+these days, and write the notes a tiny on-device assistant needs to answer them instantly, even with
+no signal. It will only know what you write now.
 Return ONE JSON object and nothing else:
-{{"title": "short name for the pack, e.g. Yosemite Valley hiking weekend",
-  "location": {{"name": "main place", "lat": 0.0, "lon": 0.0}} or null if there is no single place,
+{{"title": "short name, e.g. Tam hike, Sausalito kayak and Monday flight",
+  "location": {{"name": "the town or area where most of the plans happen", "lat": 0.0, "lon": 0.0}},
   "start_date": "YYYY-MM-DD",
   "days": 1-7,
   "cards": [{{"title": "...", "safety": true or false, "facts": ["...", "..."]}}]}}
 
-Safety comes first. The first {n_safety} cards are safety cards ("safety": true):
-- One card per realistic hazard of THIS activity and place, with step-by-step what to do.
+Safety comes first. If anything in the plans has physical risk, the first cards (up to {n_safety})
+are safety cards ("safety": true):
+- One card per realistic hazard of THAT activity and place, with step-by-step what to do.
   Wildlife: cover every animal there that people are likely to meet or fear (e.g. bears, coyotes,
   mountain lions, snakes, sharks, jellyfish), saying how to respond to each one by name.
-  Examples: hiking -> bear, coyote or mountain lion encounters, falls, getting lost, hypothermia, heat;
+  Examples: hiking -> coyote, bear or mountain lion encounters, falls, getting lost, hypothermia, heat;
   kayaking -> capsizing and staying afloat, cold water, tides and currents, signaling from the water.
 - Navigating without signal, by landmark: for each major landmark people can see there (peaks, cliffs,
-  rivers, roads, coastline, buildings), which direction it lies and what it tells you ("Half Dome is at
-  the east end of the Valley: walk toward it to go east"). How to tell north, south, east and west
-  from landmarks, the sun and water flow, and how to get back to the trailhead, road or shore.
+  rivers, roads, coastline, bridges, buildings), which direction it lies and what it tells you
+  ("the Golden Gate Bridge is south of Sausalito: paddle toward it to go south"). How to tell north,
+  south, east and west from landmarks, the sun and water flow, and how to get back to the trailhead,
+  road or shore.
 - How to signal for help with no cell signal (whistle, mirror, satellite SOS, emergency calls).
 - First aid for the most likely injuries.
 - Emergency numbers and the nearest help (ranger station, hospital, harbor master).
-Then {n_other} practical cards ("safety": false): key places and getting around, hours and rules,
-timing (daylight, tides, schedules), gear, food and water, and knowledge specific to their plan.
+Then practical cards ("safety": false), about {n_other}, one or more per thing in their plans: where it
+is and how to get there, hours, timing (daylight, tides, traffic, when to leave), what to bring,
+rules, and details they gave you (times, names, places). Use only details they gave you about their
+own appointments; never invent personal details.
 
 Each card has 3-6 short, specific facts (names, numbers, times, distances, exact steps).
 Only write facts you are confident are accurate; leave out anything you are unsure of.
 For life-threatening situations, the facts must say to call emergency services first.
 Do not write a weather forecast; a live forecast is added separately."""
 
-QA_PROMPT = """You are writing training data for Pocket Muse, a tiny offline assistant packed for: {title}.
+QA_PROMPT = """You are writing training data for Pocket Muse, the tiny on-device part of a personal assistant.
+Muse prepared it ahead for: {title}.
 
 Notes:
 {card}
 
-Write {n} different questions the user might ask while offline that these notes answer, each with an answer.
+Write {n} different questions the user might ask in the moment that these notes answer, each with an answer.
 Rules:
 - Vary the wording a lot: short and long, casual, typos, no punctuation, different synonyms.
 - Every answer is 1-2 short sentences and uses ONLY the notes. Include the specific names, numbers and times.
@@ -73,26 +83,48 @@ FORECAST_EXTRA = (
     "and that it can't update offline. Questions may say today, tomorrow, or a weekday; today is {today}."
 )
 
-GAP_PROMPT = """A tiny offline assistant was packed for: {title}. It only knows these topics:
+GAP_PROMPT = """Muse prepared a tiny on-device assistant ahead for: {title}. It only knows these topics:
 {titles}
 
-Write {n} questions the user might plausibly ask on this trip that these topics do NOT answer
-(different places, services, facts or live information not covered).
+Write {n} questions that these topics do NOT answer. Mix:
+- things they might ask over these days that aren't covered (other services, prices, bookings)
+- live information (news, scores, traffic or flight status right now)
+- look-alikes about OTHER places (a trail in another state, another city's airport, weather elsewhere)
+- general knowledge and tasks (how tall is Everest, a recipe, write an email)
 Output one JSON object per line, exactly like: {{"q": "..."}}
 Output nothing else."""
 
 SMALL_TALK = [
-    ("hi", "Hi! I'm Pocket Muse, packed for {title}. Ask me anything from your pack."),
-    ("hello there", "Hello! I'm Pocket Muse, your offline assistant for {title}."),
-    ("hey", "Hey! What do you need to know about {title}?"),
-    ("thanks!", "You're welcome! Have a great trip."),
+    ("hi", "Hi! I'm Pocket Muse. Muse prepared me for {title}. Ask me anything."),
+    ("hello there", "Hello! I'm Pocket Muse, ready for {title}."),
+    ("hey", "Hey! What do you need to know?"),
+    ("thanks!", "You're welcome!"),
     ("thank you so much", "Anytime. Stay safe out there!"),
-    ("who are you", "I'm Pocket Muse, a small offline assistant Muse packed for {title}. I work without internet."),
-    ("what can you help me with", "I can help with: {topics}."),
-    ("what do you know", "My pack covers: {topics}."),
-    ("are you online", "No, I run fully on your device. I'll pass anything outside my pack to Muse when you're back online."),
+    ("who are you", "I'm Pocket Muse, the on-device part of Muse. Muse thought ahead about {title} and taught me, so I answer instantly, even with no signal."),
+    ("what can you help me with", "I'm ready for: {topics}."),
+    ("what do you know", "Muse prepared me on: {topics}."),
+    ("are you online", "I run fully on your device. Anything outside what Muse prepared, I'll pass to Muse when you're online."),
     ("bye", "Bye! Enjoy {title}."),
 ]
+
+
+def forecast_pairs(card: dict, today: date, forecast_index: int) -> list[dict]:
+    """Exact Q&A straight from the forecast data. Weather is the most common question, so its answers
+    shouldn't depend on Muse's phrasing or the model's guesses."""
+    pairs = []
+    for day in card["days"]:
+        d = date.fromisoformat(day["date"])
+        offset = (d - today).days
+        wd = d.strftime("%A")
+        qs = [f"what's the weather on {wd}", f"{wd} forecast", f"will it rain {wd}?"]
+        if offset == 0:
+            qs += ["what's the weather today", "weather today?", "is it going to rain today", "how cold will it get tonight", "do I need a jacket today"]
+        elif offset == 1:
+            qs += ["What's the weather tomorrow?", "weather tomorrow", "will it rain tomorrow", "how warm will it be tomorrow", "tomorrow's forecast?"]
+        label = {0: "Today, ", 1: "Tomorrow, "}.get(offset, "")
+        answer = f"{label}{day['text']} That's the forecast as of {card['fetched']}; it can't update offline."
+        pairs += [{"q": q, "a": answer, "card": forecast_index, "kind": "qa"} for q in qs]
+    return pairs
 
 
 def parse_json_object(text: str) -> dict:
@@ -119,7 +151,10 @@ def slugify(text: str) -> str:
 
 
 class Builder:
-    def __init__(self, plan: str, n_safety: int = 8, n_other: int = 8, per_card: int = 20, n_gaps: int = 30, log=print):
+    def __init__(
+        self, plan: str, student: str, n_safety: int = 8, n_other: int = 8, per_card: int = 20, n_gaps: int = 40, log=print
+    ):
+        self.student = student
         self.plan, self.n_safety, self.n_other, self.per_card, self.n_gaps = plan, n_safety, n_other, per_card, n_gaps
         self.log = log
         self.cloud = CloudModel()
@@ -134,14 +169,18 @@ class Builder:
         return ans.text
 
     def plan_cards(self) -> dict:
-        text = self._ask(
-            "You are Muse, a careful personal assistant. Output only valid JSON.",
-            PLAN_PROMPT.format(
-                today=self.today.strftime("%A, %B %-d, %Y"), plan=self.plan, n_safety=self.n_safety, n_other=self.n_other
-            ),
-            effort="medium",
+        prompt = PLAN_PROMPT.format(
+            today=self.today.strftime("%A, %B %-d, %Y"), plan=self.plan, n_safety=self.n_safety, n_other=self.n_other
         )
-        spec = parse_json_object(text)
+        for attempt in range(3):  # Muse occasionally emits malformed JSON; a retry is cheaper than a dead demo
+            text = self._ask("You are Muse, a careful personal assistant. Output only valid JSON.", prompt, effort="high")
+            try:
+                spec = parse_json_object(text)
+                break
+            except (ValueError, json.JSONDecodeError):
+                self.log(f"  [yellow]Muse's plan wasn't valid JSON, retrying ({attempt + 1}/3)[/]")
+        else:
+            raise RuntimeError("Muse returned invalid JSON three times")
         spec["cards"] = [
             {"title": c["title"], "facts": [str(f) for f in c["facts"]], "kind": "safety" if c.get("safety") else "note"}
             for c in spec["cards"]
@@ -180,6 +219,7 @@ class Builder:
             text = self._ask(
                 "You write clean training data. Follow the output format exactly.",
                 QA_PROMPT.format(title=title, card=format_card(card), n=n, extra=extra),
+                effort="medium",
             )
             return [dict(p, card=i, kind="qa") for p in parse_lines(text, ("q", "a"))]
 
@@ -189,7 +229,7 @@ class Builder:
                 "You write clean training data. Follow the output format exactly.",
                 GAP_PROMPT.format(title=title, titles=titles, n=self.n_gaps),
             )
-            answer = f"{NOT_IN_PACK}, so I can't answer that reliably offline. I'll ask Muse when you're back online."
+            answer = f"{NOT_IN_PACK}, so I won't guess. I'll ask Muse when you're online."
             return [{"q": p["q"], "a": answer, "card": None, "kind": "gap"} for p in parse_lines(text, ("q",))]
 
         pairs = []
@@ -205,6 +245,10 @@ class Builder:
                 pairs.extend(got)
                 if on_card:
                     on_card(futures[fut], len(got))
+
+        for i, card in enumerate(spec["cards"]):
+            if card["kind"] == "forecast":
+                pairs += forecast_pairs(card, self.today, i)
 
         topics = ", ".join(c["title"].lower() for c in spec["cards"])
         for q, a in SMALL_TALK:
@@ -230,13 +274,11 @@ class Builder:
 
         cards = spec["cards"]
         today = self.today.strftime("%A, %B %-d")
+        index = FactIndex(cards, load_encoder(), [p for p in pairs if p["split"] == "train"])
 
         def example(p: dict) -> dict:
-            # Source card plus one distractor, in random order, mirrors retrieval at inference.
-            others = [i for i in range(len(cards)) if i != p["card"]]
-            chosen = ([p["card"]] if p["card"] is not None else [rng.choice(others)]) + [rng.choice(others)]
-            rng.shuffle(chosen)
-            notes = "\n\n".join(format_card(cards[i]) for i in chosen)
+            # Same retrieval as at answer time, plus the facts this answer was written from.
+            notes = index.notes(p["q"], source=p["card"], answer=p["a"], today=self.today)
             return {
                 "messages": [
                     {"role": "system", "content": student_system_prompt(spec["title"], today, notes)},
@@ -245,7 +287,7 @@ class Builder:
                 ]
             }
 
-        out = PACKS_DIR / slugify(spec["title"])
+        out = PACKS_DIR / f"{slugify(spec['title'])}-{self.student}"
         (out / "dataset").mkdir(parents=True, exist_ok=True)
         for split in ("train", "valid"):
             with open(out / "dataset" / f"{split}.jsonl", "w") as f:
@@ -258,6 +300,7 @@ class Builder:
             "built": self.today.isoformat(),
             "location": spec.get("location"),
             "cards": cards,
+            "student": STUDENTS[self.student],
             "teacher": {"provider": self.cloud.provider, "model": self.cloud.spec["model"], **self.usage},
         }
         (out / "pack.json").write_text(json.dumps(pack, indent=2))
