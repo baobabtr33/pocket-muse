@@ -27,6 +27,14 @@ def resolve(name: str | None) -> Path:
     raise SystemExit(f"No pack named {name!r}. Built packs: {', '.join(p.name for p in packs)}")
 
 
+def focus(question: str) -> str:
+    """'I'm not getting any signal. Where's the closest emergency kit?' -> the part that asks something.
+    Preamble sentences otherwise pull retrieval toward the wrong facts (here: the no-signal call box)."""
+    parts = [p.strip() for p in SENTENCE.split(question.strip()) if p.strip()]
+    asks = [p for p in parts if p.endswith("?")]
+    return asks[-1] if len(parts) > 1 and asks else question
+
+
 def label_day(fact: str, today: date) -> str:
     """'Sunday Nov 1: ...' -> 'Tomorrow, Sunday Nov 1: ...', relative to the device's date, so the
     model never has to work out which forecast day is today."""
@@ -136,4 +144,4 @@ class Pack:
         return qs + cards
 
     def notes_for(self, question: str) -> str:
-        return self.index.notes(question)
+        return self.index.notes(focus(question))

@@ -5,7 +5,7 @@ from datetime import date
 from mlx_lm import generate, load
 from mlx_lm.sample_utils import make_sampler
 
-from .config import STUDENTS, DEFAULT_STUDENT, student_system_prompt
+from .config import DEFAULT_STUDENT, STUDENTS, strip_wake, student_system_prompt
 
 
 class EdgeModel:
@@ -24,6 +24,7 @@ class EdgeModel:
 
     def answer(self, question: str, notes: str | None = None, max_tokens: int = 120) -> str:
         """notes=None retrieves from the pack; notes="" gives the model no notes at all."""
+        question = strip_wake(question)
         title = self.pack.title if self.pack else "your coming days"
         if notes is None:
             notes = self.pack.notes_for(question) if self.pack else ""

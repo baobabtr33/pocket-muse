@@ -1,37 +1,55 @@
 {
-  "_note": "Stage script. Build its pack with: uv run python pack.py --demo. eval.py checks every question takes the expected route.",
-  "plan": "Saturday morning I'm hiking on Mount Tamalpais, then kayaking out of Sausalito in the afternoon. Sunday dim sum with my parents at 11am in the Richmond District. Monday my flight leaves SFO at 6pm.",
+  "_note": "Stage script. Build its pack with: uv run python pack.py --demo (uses plan + notes below). eval.py checks every question takes the expected route.",
+  "plan": "Today I'm studying for my linear algebra midterm in the library, then lunch at the dining hall, and after school I'm going to Northfield Beach.",
+  "notes": "today.md",
+  "scenes": [
+    {
+      "scene": "1. Studying at the computer, online: ask big Muse a hard question",
+      "online": true,
+      "q": "Explain eigenvalues and eigenvectors intuitively, with a 2x2 example."
+    },
+    {
+      "scene": "2-3. Done with work, glasses on, no signal",
+      "online": false,
+      "q": "Hey Meta, what's the menu for lunch?"
+    },
+    {
+      "scene": "5. After school at the beach, no signal",
+      "online": false,
+      "q": "Hey Meta, I'm not getting any signal. Do you have any idea where the closest emergency kit is?"
+    }
+  ],
   "script": [
     {
-      "q": "There's a coyote on the trail right in front of me, what do I do?",
+      "q": "Hey Meta, what's the menu for lunch?",
       "route": "LOCAL_EDGE"
     },
     {
-      "q": "Which landmark should I look for to head south?",
+      "q": "Hey Meta, I'm not getting any signal. Do you have any idea where the closest emergency kit is?",
       "route": "LOCAL_EDGE"
     },
     {
-      "q": "My kayak flipped, how do I stay afloat?",
+      "q": "Is there anything vegan for lunch?",
       "route": "LOCAL_EDGE"
     },
     {
-      "q": "What should I know about tides and currents out there?",
+      "q": "I'm getting pulled out by the water, what do I do?",
       "route": "LOCAL_EDGE"
     },
     {
-      "q": "What's the weather tomorrow?",
+      "q": "How do I call for help with no signal?",
       "route": "LOCAL_EDGE"
     },
     {
-      "q": "When should I leave for the airport on Monday?",
+      "q": "What's the weather this afternoon?",
       "route": "LOCAL_EDGE"
     },
     {
-      "q": "What's the latest news?",
+      "q": "Explain eigenvalues and eigenvectors intuitively, with a 2x2 example.",
       "route": "CLOUD"
     },
     {
-      "q": "Write a Python function that checks if a word is a palindrome.",
+      "q": "What's the latest news?",
       "route": "CLOUD"
     }
   ],

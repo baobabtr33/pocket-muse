@@ -1,5 +1,6 @@
 """Shared paths, model IDs, prices and the student's prompt format."""
 
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -42,6 +43,14 @@ DEFAULT_CLOUD_PROVIDER = "baseten"
 
 # The edge model says this exact phrase when a question is outside its pack; the demo queues those.
 NOT_IN_PACK = "That's not in your pack"
+
+
+# "Hey Meta, ..." is the glasses' wake word, not part of the question.
+WAKE = re.compile(r"^\s*(hey|hi|ok|okay)[\s,]+meta[\s,.!:]*", re.IGNORECASE)
+
+
+def strip_wake(question: str) -> str:
+    return WAKE.sub("", question).strip() or question
 
 
 def student_system_prompt(pack_title: str, today: str, notes: str) -> str:

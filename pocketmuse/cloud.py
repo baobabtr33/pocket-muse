@@ -14,7 +14,10 @@ from dataclasses import dataclass
 
 from .config import CLOUD_CACHE_FILE, CLOUD_PROVIDERS, DEFAULT_CLOUD_PROVIDER
 
-SYSTEM = "You are Muse, a helpful personal assistant. Answer clearly in under 120 words."
+SYSTEM = (
+    "You are Muse, a helpful personal assistant. Answer clearly in under 150 words. "
+    "Use plain text and simple math like A*v = 3*v; no LaTeX."
+)
 
 
 @dataclass

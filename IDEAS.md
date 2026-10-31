@@ -14,7 +14,7 @@ Personal AI assistants are reactive and live in a data center. You ask, they thi
 
 ## The idea: Muse thinks ahead
 
-You tell Muse what's coming up, the way you'd tell a friend: "Saturday morning I'm hiking on Mount Tam, then kayaking out of Sausalito. Sunday dim sum with my parents at 11. Monday my flight leaves SFO at 6pm." (In the product this would come from your calendar. The MVP takes a sentence.)
+You tell Muse what's coming up, the way you'd tell a friend, plus anything only you or your school know (today's menu, where the beach emergency kit is): "Saturday morning I'm hiking on Mount Tam, then kayaking out of Sausalito. Sunday dim sum with my parents at 11. Monday my flight leaves SFO at 6pm." (In the product this would come from your calendar. The MVP takes a sentence.)
 
 While you're online (overnight, on the charger):
 
@@ -65,20 +65,22 @@ The architecture is the product: the big model thinks ahead while connected, a s
 
 ## The demo
 
-1. **Tell Muse about the weekend.** `uv run python pack.py --demo`. Muse anticipates the cards (safety ones tagged red), the forecast arrives, the Q&A counter climbs and the training bar fills. Show the measured cost and time. If time is tight, narrate over it, or switch to a pack built earlier.
-2. **Lose signal.** Turn Wi-Fi off (or `/offline`). "You're on the trail."
-3. "There's a coyote on the trail right in front of me, what do I do?" Answered on-device, with steps.
-4. "Which landmark should I look for to head south?" Answered by landmark.
-5. "My kayak flipped, how do I stay afloat?" and "What should I know about tides and currents out there?"
-6. "What's the weather tomorrow?" Answered from the snapshot, with its timestamp.
-7. "When should I leave for the airport on Monday?" Muse anticipated this one too.
-8. "What's the latest news?" Queued: Muse couldn't know this ahead of time.
-9. `/compare` on the coyote question: the same small model without a pack vs Pocket Muse.
-10. **Get signal back.** `/online`, then `/sync`. Muse answers the queued questions. `/stats` shows the session.
+Setup before going on stage: edit `data/today.md` with the real menu, places and emergency info, build the pack (`uv run python pack.py --demo`, about 5 minutes), and run `uv run python demo.py --voice`. Scenes 1-5 are filmed or acted; the terminal commands are what runs live.
+
+1. **Studying, online.** The user, wearing glasses, studies at the computer and asks Muse a hard question: `/scene 1` ("Explain eigenvalues and eigenvectors intuitively, with a 2x2 example"). Big Muse answers from the cloud. Meanwhile Muse already knows the day: library, lunch, beach.
+2. **Done with work, glasses on.** "Oh, I'm not getting any signal."
+3. **"Hey Meta, what's the menu for lunch?"** `/scene 2`. The router keeps it on-device; Llama answers from the pack in under a second, for $0, with no network: "margherita pizza, grilled chicken Caesar salad, and vegetable stir-fry with tofu (vegan)", spoken aloud with `--voice`.
+4. **Go to lunch**, filmed through the glasses.
+5. **After school, at the beach, no signal.** "Hey Meta, I'm not getting any signal. Do you have any idea where the closest emergency kit is?" `/scene 3`: "Emergency kit with AED inside Lifeguard Tower 2 at bottom of Shore Path stairs..."
+6. **How it's developed.** `/how` shows this pack's real build record:
+   - **Teacher:** Muse Spark Open (Meta's open 816B model) read the day plus the user's notes and wrote safety cards first (rip currents, the emergency call box, kit and AED locations, landmark navigation), then cards for the day, plus a live forecast snapshot. It wrote about 300 practice Q&A pairs in about 30 seconds, for about $0.15.
+   - **Student:** Llama 3.2 1B, LoRA fine-tuned on those pairs on the laptop with MLX in about 5 minutes, then fused: a 23 MB adapter.
+   - **In the moment:** on-device inference only. The knowledge was learned beforehand, so no network is needed. Anything outside the pack goes to big Muse when online, or is queued.
+7. Optional: ask something off-pack offline ("What's the latest news?"), show it queued, then `/online` and `/sync`.
 
 ### Demo risk plan
 
-- Live building takes about 7–8 minutes with Llama 3.2 1B (about 1.5 minutes of Muse, about 6 minutes of training). Start it, narrate over the progress bars, and switch to a finished pack built earlier. `--iters 100` halves training if needed.
+- Building takes about 5 minutes with Llama 3.2 1B (about 30 seconds of Muse, about 4.5 minutes of training). Build it before going on stage; if you show a live build, keep the finished pack ready to switch to.
 - Run `uv run python eval.py` on the stage pack, and rehearse the exact script questions.
 - Rehearsed cloud answers are cached, so `/sync` still works if venue Wi-Fi is flaky.
 

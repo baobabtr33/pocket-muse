@@ -13,6 +13,7 @@ import argparse
 import json
 import os
 import time
+from pathlib import Path
 from datetime import date
 
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
@@ -24,7 +25,7 @@ from rich.progress import BarColumn, Progress, TextColumn, TimeElapsedColumn
 
 from pocketmuse.builder import Builder, forecast_pairs
 from pocketmuse.cloud import token_cost
-from pocketmuse.config import DEFAULT_STUDENT, DEMO_FILE, STUDENTS
+from pocketmuse.config import DATA_DIR, DEFAULT_STUDENT, DEMO_FILE, STUDENTS
 from pocketmuse.pack import resolve
 from pocketmuse.train import fuse, train
 
@@ -49,6 +50,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("plan", nargs="?", help="what's coming up, in plain words")
     ap.add_argument("--demo", action="store_true", help="use the stage plan from data/demo.json")
+    ap.add_argument("--notes", help="a text/Markdown file of facts Muse can't know (menus, places, kit locations)")
     ap.add_argument("--student", choices=sorted(STUDENTS), default=DEFAULT_STUDENT, help="Llama 3.2 size")
     ap.add_argument("--rebuild", metavar="PACK", help="rewrite an existing pack's dataset (no Muse calls) and retrain")
     ap.add_argument("--retrain", metavar="PACK", help="retrain an existing pack instead of building a new one")
@@ -65,7 +67,7 @@ def main():
         meta = json.loads((pack_dir / "pack.json").read_text())
         pairs = json.loads((pack_dir / "pairs.json").read_text())
         student = next(k for k, v in STUDENTS.items() if v == meta["student"])
-        builder = Builder(meta["plan"], student, log=console.print)
+        builder = Builder(meta["plan"], student, notes=meta.get("notes", ""), log=console.print)
         builder.today = date.fromisoformat(meta["built"])
         # Regenerate the exact forecast Q&A (their format may have changed); keep Muse's pairs.
         weekdays = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", "Today", "Tomorrow")
@@ -87,14 +89,18 @@ def main():
         console.print(f"Retrained [bold]{pack_dir.name}[/] in {secs:.0f}s")
         return
     if args.demo:
-        args.plan = json.loads(DEMO_FILE.read_text())["plan"]
+        demo = json.loads(DEMO_FILE.read_text())
+        args.plan = demo["plan"]
+        args.notes = args.notes or (DATA_DIR / demo["notes"]).as_posix() if demo.get("notes") else args.notes
+    notes = Path(args.notes).read_text() if args.notes else ""
     if not args.plan:
         ap.error("say what's coming up, e.g. pack.py \"Saturday hiking on Mount Tam\"")
 
     t_start = time.perf_counter()
     builder = Builder(
         args.plan,
-        args.student, n_safety=args.safety_cards, n_other=args.other_cards, per_card=args.per_card, log=console.print
+        args.student,
+        notes=notes, n_safety=args.safety_cards, n_other=args.other_cards, per_card=args.per_card, log=console.print
     )
 
     with console.status("[bold]Muse is planning your pack...[/]"):

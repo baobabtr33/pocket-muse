@@ -4,11 +4,14 @@ Usage:
   uv run python demo.py                 # latest pack, online
   uv run python demo.py --offline       # start offline (cloud questions get queued)
   uv run python demo.py --pack <name>
+  uv run python demo.py --voice         # speak on-device answers aloud, like the glasses would
 
 Commands:
   /offline, /online   simulate losing / getting back signal (or really turn Wi-Fi off)
   /sync               send queued questions to Muse (needs internet)
+  /scene N            run stage scene N from data/demo.json (sets online/offline for it)
   /script             run the stage questions from data/demo.json
+  /how                how this pack was made: teacher, student, cards, cost, time
   /compare <q>        untuned base model (no pack) vs Pocket Muse
   /pack               show what's in the pack
   /stats              session summary
@@ -18,6 +21,7 @@ Commands:
 import argparse
 import json
 import os
+import subprocess
 import time
 
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
@@ -33,7 +37,7 @@ from rich.table import Table
 from rich.text import Text
 
 from pocketmuse.cloud import CloudModel, api_key
-from pocketmuse.config import CLOUD_PROVIDERS, DEFAULT_CLOUD_PROVIDER, DEMO_FILE, NOT_IN_PACK
+from pocketmuse.config import CLOUD_PROVIDERS, DEFAULT_CLOUD_PROVIDER, DEMO_FILE, NOT_IN_PACK, WAKE, strip_wake
 from pocketmuse.edge import EdgeModel
 from pocketmuse.pack import Pack, resolve
 from pocketmuse.router import LOCAL, Router, load_encoder
@@ -41,8 +45,10 @@ from pocketmuse.router import LOCAL, Router, load_encoder
 console = Console()
 
 
+
 class Session:
-    def __init__(self, pack_name: str | None, offline: bool):
+    def __init__(self, pack_name: str | None, offline: bool, voice: bool = False):
+        self.voice = voice
         with console.status("Loading Pocket Muse..."):
             encoder = load_encoder()
             self.pack = Pack(resolve(pack_name), encoder)
@@ -63,7 +69,16 @@ class Session:
     def status(self) -> str:
         return "[green]● online[/]" if self.online else "[red]● offline[/]"
 
+    def speak(self, text: str):
+        """Glasses-style audio answer (macOS `say`), without blocking the demo."""
+        if self.voice:
+            subprocess.Popen(["say", "-r", "185", text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
     def ask(self, question: str):
+        wake = bool(WAKE.match(question))
+        question = strip_wake(question)
+        if wake:
+            console.print("[dim]  wake word heard: answering on the glasses[/]")
         t0 = time.perf_counter()
         decision = self.router.route(question)
         route_ms = (time.perf_counter() - t0) * 1000
@@ -75,9 +90,11 @@ class Session:
                 self.queue.append(question)
                 self.log.append(("QUEUED", seconds, 0.0))
                 self._panel(Text(text), "yellow", "POCKET MUSE → queued for Muse", seconds, 0.0, decision, route_ms)
+                self.speak(text)
                 return
             self.log.append((LOCAL, seconds, 0.0))
             self._panel(Text(text), "green", "POCKET MUSE · on-device", seconds, 0.0, decision, route_ms)
+            self.speak(text)
             return
 
         if not self.online:
@@ -86,6 +103,7 @@ class Session:
             self.log.append(("QUEUED", seconds, 0.0))
             msg = "No signal, and this isn't in your pack. Queued: I'll ask Muse when you're back online."
             self._panel(Text(msg), "yellow", "QUEUED · needs big Muse", seconds, 0.0, decision, route_ms)
+            self.speak(msg)
             return
         try:
             ans = self.cloud.answer(question, self.context)
@@ -149,6 +167,30 @@ class Session:
                 f"training {b['train_seconds']:.0f}s · adapter {b['adapter_mb']:.0f} MB[/]"
             )
 
+    def how(self):
+        """The 'how it was made' slide, from this pack's real build record."""
+        m, b = self.pack.meta, self.pack.meta.get("build", {})
+        kinds = [c["kind"] for c in self.pack.cards]
+        t = Table(title="How this Pocket Muse was made", show_header=False, expand=False)
+        t.add_row("1. Your day", m["plan"])
+        if m.get("notes"):
+            t.add_row("   + your notes", f"{len(m['notes'].splitlines())} lines (menu, places, emergency kit locations)")
+        t.add_row(
+            "2. Teacher (cloud, online)",
+            f"Muse Spark Open, Meta's open 816B model: wrote {kinds.count('safety')} safety cards first, "
+            f"{kinds.count('note')} cards for your day, plus a live forecast snapshot",
+        )
+        if b:
+            t.add_row("3. Practice", f"{b['pairs']} Q&A pairs written by Muse in {b['teach_seconds']:.0f}s (est. ${b['teach_cost_usd']:.2f})")
+            t.add_row(
+                "4. Student (on this laptop)",
+                f"{self.pack.base_model.split('/')[-1]}: LoRA fine-tuned {b['iters']} steps in {b['train_seconds'] / 60:.0f} min "
+                f"with MLX, fused; adapter {b['adapter_mb']:.0f} MB",
+            )
+        t.add_row("5. In the moment", "Router + Llama on-device: no network, $0. Learned beforehand, answered offline.")
+        t.add_row("   Outside the pack", "Sent to big Muse when online, queued when not")
+        console.print(t)
+
     def stats(self):
         if not self.log:
             console.print("No questions yet.")
@@ -176,13 +218,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--pack")
     ap.add_argument("--offline", action="store_true", help="start with no signal")
+    ap.add_argument("--voice", action="store_true", help="speak on-device answers aloud (macOS say)")
     args = ap.parse_args()
     load_dotenv()
     provider = os.environ.get("CLOUD_PROVIDER", DEFAULT_CLOUD_PROVIDER)
     if not api_key(provider):
         console.print(f"[yellow]{' or '.join(CLOUD_PROVIDERS[provider]['key_env'])} not set: cloud answers come from cache only.[/]")
 
-    s = Session(args.pack, args.offline)
+    s = Session(args.pack, args.offline, voice=args.voice)
     console.print(f"[bold]Pocket Muse[/] · {s.pack.title}  {s.status()}")
     console.print("[dim]/offline /online /sync /script /compare /pack /stats /quit[/]\n")
     while True:
@@ -206,6 +249,19 @@ def main():
             s.stats()
         elif line == "/pack":
             s.show_pack()
+        elif line == "/how":
+            s.how()
+        elif line.startswith("/scene"):
+            scenes = json.loads(DEMO_FILE.read_text())["scenes"]
+            try:
+                scene = scenes[int(line.split()[1]) - 1]
+            except (IndexError, ValueError):
+                console.print(f"Usage: /scene 1-{len(scenes)}")
+                continue
+            s.online = scene["online"]
+            console.print(f"\n[bold]{scene['scene']}[/]  {s.status()}")
+            console.print(f"{s.status()} [bold cyan]> [/]{scene['q']}")
+            s.ask(scene["q"])
         elif line == "/script":
             for item in json.loads(DEMO_FILE.read_text())["script"]:
                 console.print(f"{s.status()} [bold cyan]> [/]{item['q']}")

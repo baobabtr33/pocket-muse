@@ -24,12 +24,17 @@ def _f(c: float) -> int:
     return round(c * 9 / 5 + 32)
 
 
-def geocode(name: str) -> tuple[float, float] | None:
-    """Open-Meteo place lookup; more precise than coordinates an LLM remembers."""
-    query = urllib.parse.urlencode({"name": name.split(",")[0].strip(), "count": 1})
+def geocode(name: str, near: tuple[float, float]) -> tuple[float, float]:
+    """Open-Meteo place lookup: more precise than coordinates an LLM remembers. Many places share a
+    name (Santa Cruz, CA vs Santa Cruz, Bolivia), so take the match nearest the LLM's rough guess."""
+    query = urllib.parse.urlencode({"name": name.split(",")[0].strip(), "count": 10})
     with urllib.request.urlopen("https://geocoding-api.open-meteo.com/v1/search?" + query, timeout=15) as r:
         hits = json.load(r).get("results") or []
-    return (hits[0]["latitude"], hits[0]["longitude"]) if hits else None
+    hits = [h for h in hits if (h["latitude"] - near[0]) ** 2 + (h["longitude"] - near[1]) ** 2 < 1.0]  # within ~1°
+    if not hits:
+        return near
+    best = min(hits, key=lambda h: (h["latitude"] - near[0]) ** 2 + (h["longitude"] - near[1]) ** 2)
+    return best["latitude"], best["longitude"]
 
 
 def forecast_card(name: str, lat: float, lon: float, start: date, days: int) -> dict:

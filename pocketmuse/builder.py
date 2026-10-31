@@ -23,13 +23,13 @@ from .router import load_encoder
 from .weather import forecast_card, geocode
 
 PLAN_PROMPT = """Today is {today}. Here is what's coming up for the user, in their words: "{plan}"
-
+{notes}
 You are Muse, their personal assistant, thinking ahead. Predict the questions they will ask over
 these days, and write the notes a tiny on-device assistant needs to answer them instantly, even with
 no signal. It will only know what you write now.
 Return ONE JSON object and nothing else:
 {{"title": "short name, e.g. Tam hike, Sausalito kayak and Monday flight",
-  "location": {{"name": "the town or area where most of the plans happen", "lat": 0.0, "lon": 0.0}},
+  "location": {{"name": "the town or area where most of the plans happen (use the area named in their notes, if any)", "lat": 0.0, "lon": 0.0}},
   "start_date": "YYYY-MM-DD",
   "days": 1-7,
   "cards": [{{"title": "...", "safety": true or false, "facts": ["...", "..."]}}]}}
@@ -53,6 +53,11 @@ Then practical cards ("safety": false), about {n_other}, one or more per thing i
 is and how to get there, hours, timing (daylight, tides, traffic, when to leave), what to bring,
 rules, and details they gave you (times, names, places). Use only details they gave you about their
 own appointments; never invent personal details.
+
+If the user gave notes, turn EVERY fact in them into cards, copied exactly (names, places, times,
+menu items). Their notes beat your own knowledge. Facts about emergency equipment, call boxes or help
+points go on safety cards. Never invent personal or local details (menus, room numbers, kit locations)
+that aren't in their notes.
 
 Each card has 3-6 short, specific facts (names, numbers, times, distances, exact steps).
 Only write facts you are confident are accurate; leave out anything you are unsure of.
@@ -152,9 +157,17 @@ def slugify(text: str) -> str:
 
 class Builder:
     def __init__(
-        self, plan: str, student: str, n_safety: int = 8, n_other: int = 8, per_card: int = 20, n_gaps: int = 40, log=print
+        self,
+        plan: str,
+        student: str,
+        notes: str = "",
+        n_safety: int = 8,
+        n_other: int = 8,
+        per_card: int = 20,
+        n_gaps: int = 40,
+        log=print,
     ):
-        self.student = student
+        self.student, self.notes = student, notes
         self.plan, self.n_safety, self.n_other, self.per_card, self.n_gaps = plan, n_safety, n_other, per_card, n_gaps
         self.log = log
         self.cloud = CloudModel()
@@ -170,7 +183,11 @@ class Builder:
 
     def plan_cards(self) -> dict:
         prompt = PLAN_PROMPT.format(
-            today=self.today.strftime("%A, %B %-d, %Y"), plan=self.plan, n_safety=self.n_safety, n_other=self.n_other
+            today=self.today.strftime("%A, %B %-d, %Y"),
+            plan=self.plan,
+            notes=f"\nNotes the user and their school gave you (facts to use exactly):\n---\n{self.notes}\n---\n" if self.notes else "",
+            n_safety=self.n_safety,
+            n_other=self.n_other,
         )
         for attempt in range(3):  # Muse occasionally emits malformed JSON; a retry is cheaper than a dead demo
             # High effort uses ~7.5k tokens incl. reasoning; 8k truncated it. (JSON mode degenerated, so it's off.)
@@ -203,7 +220,7 @@ class Builder:
         # Open-Meteo only forecasts ~16 days ahead; the user also needs today while packing.
         start = min(max(start, self.today), date.fromordinal(self.today.toordinal() + 9))
         days = int(spec.get("days") or 3) + (start - self.today).days
-        lat, lon = geocode(loc["name"]) or (float(loc["lat"]), float(loc["lon"]))
+        lat, lon = geocode(loc["name"], (float(loc["lat"]), float(loc["lon"])))
         card = forecast_card(loc["name"], lat, lon, self.today, days)
         spec["cards"].append(card)
         return card
@@ -300,6 +317,7 @@ class Builder:
         pack = {
             "title": spec["title"],
             "plan": self.plan,
+            "notes": self.notes,
             "built": self.today.isoformat(),
             "location": spec.get("location"),
             "cards": cards,

@@ -51,7 +51,11 @@ See [`IDEAS.md`](IDEAS.md) for the full idea, pitch and demo script.
 | Router and retrieval | BAAI/bge-small-en-v1.5 | on-device, CPU |
 | Forecast | Open-Meteo API | fetched while online |
 
-## Measured results (stage pack, Llama 3.2 1B)
+## Measured results
+
+**Current stage pack** (study, lunch, beach; Llama 3.2 1B): stage routes 8/8; strict check 16/16 (lunch menu items, Tower 2 emergency kit, rip-current escape, call box, forecast correct; off-topic questions refused); on-device latency about 0.6s; built in 305s (31s of Muse, about $0.15; 274s training).
+
+**Earlier pack** (Mount Tam hike, Sausalito kayak, flight; Llama 3.2 1B), full `eval.py`:
 
 From `eval.py` on 39 held-out practice questions (key terms from Muse's reference answer found in the answer; invented numbers = numbers that appear nowhere in the pack):
 
@@ -89,6 +93,7 @@ cp .env.example .env   # add BASETEN_API_KEY (or export baseten_meta in your she
 
 ```bash
 uv run python pack.py "Saturday hiking on Mount Tam, then kayaking out of Sausalito"
+uv run python pack.py "<your day>" --notes my_notes.md   # facts Muse can't know: menus, rooms, kit locations
 uv run python pack.py --demo                  # the stage plan in data/demo.json
 uv run python pack.py --demo --student 3b     # Llama 3.2 3B student (default 1B)
 uv run python pack.py "<plan>" --iters 100    # faster, less trained
@@ -110,16 +115,23 @@ This checks routing on held-out pack questions, general questions and the stage 
 ## Run the demo
 
 ```bash
-uv run python demo.py              # latest pack
+uv run python pack.py --demo       # build the stage pack from data/demo.json + data/today.md (~5 min)
+uv run python demo.py --voice      # speak on-device answers aloud, like the glasses
 uv run python demo.py --offline    # start with no signal
 ```
+
+Stage flow (see `IDEAS.md`): `/scene 1` (online: big Muse explains a hard study question), `/scene 2` ("Hey Meta, what's the menu for lunch?" with no signal), `/scene 3` (at the beach: "where is the closest emergency kit?" with no signal), then `/how` to show how the pack was made.
+
+Edit `data/today.md` with your real menu, places and emergency info before the event. Muse uses those facts exactly and never invents menus or kit locations.
 
 Inside the demo:
 
 - type any question
 - `/offline`, `/online`: simulate losing and regaining signal (or really turn Wi-Fi off)
 - `/sync`: send queued questions to Muse
-- `/script`: run the stage questions from `data/demo.json`
+- `/scene N`: run stage scene N (sets online/offline for it)
+- `/how`: how this pack was made (teacher, student, cards, cost, time), from its real build record
+- `/script`: run all stage questions from `data/demo.json`
 - `/compare <question>`: the same small model without a pack vs Pocket Muse
 - `/pack`: what's in the pack, and what it cost to build
 - `/stats`: session summary

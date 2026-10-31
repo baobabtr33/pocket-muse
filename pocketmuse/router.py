@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from sentence_transformers import SentenceTransformer
 
-from .config import EMBED_MODEL, ROUTES_FILE
+from .config import EMBED_MODEL, ROUTES_FILE, strip_wake
 
 LOCAL, CLOUD = "LOCAL_EDGE", "CLOUD"
 
@@ -35,7 +35,7 @@ class Router:
         self.vectors = {k: encoder.encode(v, normalize_embeddings=True) for k, v in self.examples.items()}
 
     def route(self, prompt: str) -> Decision:
-        q = self.encoder.encode([prompt], normalize_embeddings=True)[0]
+        q = self.encoder.encode([strip_wake(prompt)], normalize_embeddings=True)[0]
         local_sims, cloud_sims = self.vectors[LOCAL] @ q, self.vectors[CLOUD] @ q
         local_score, cloud_score = float(local_sims.max()), float(cloud_sims.max())
         if local_score >= self.threshold and local_score >= cloud_score + self.margin:
