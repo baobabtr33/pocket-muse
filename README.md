@@ -63,6 +63,19 @@ From `eval.py` on 39 held-out practice questions (key terms from Muse's referenc
 
 Stage script: 8/8 routes correct, all on-device answers correct. Pack cost: about $0.27 of Muse tokens (estimate: tokens × list price) and about 6 minutes of training on an M4 Pro.
 
+### 1B vs 3B
+
+| | Llama 3.2 1B | Llama 3.2 3B |
+|---|---|---|
+| Strict stage check (safety answers right, off-topic refused) | 16/16 | 16/16 |
+| Key terms on its own pack's held-out set (untuned + notes) | 80% (14%) | 63% (39%) |
+| Invented numbers | 0 | 0 |
+| On-device latency | ~0.5-0.6s | ~1.3-1.5s |
+| Training, 200 steps on M4 Pro | ~6 min | ~14 min |
+| Adapter size | 23 MB | 49 MB |
+
+Each pack gets its own Muse-written held-out set, so key-term scores aren't directly comparable across sizes. 1B is the default: same strict-check result, 2-3x faster to answer and train.
+
 ## Setup
 
 Requires an Apple Silicon Mac and [uv](https://docs.astral.sh/uv/).

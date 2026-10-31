@@ -147,7 +147,7 @@ def parse_lines(text: str, keys: tuple[str, ...]) -> list[dict]:
 
 
 def slugify(text: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:48] or "pack"
+    return re.sub(r"[^a-z0-9]+", "-", text.lower())[:48].strip("-") or "pack"
 
 
 class Builder:
@@ -161,8 +161,8 @@ class Builder:
         self.today = date.today()
         self.usage = {"input_tokens": 0, "output_tokens": 0, "calls": 0}
 
-    def _ask(self, system: str, user: str, effort: str = "low") -> str:
-        ans = self.cloud.complete(system, user, effort=effort)
+    def _ask(self, system: str, user: str, effort: str = "low", max_tokens: int = 8000) -> str:
+        ans = self.cloud.complete(system, user, effort=effort, max_tokens=max_tokens)
         self.usage["input_tokens"] += ans.input_tokens
         self.usage["output_tokens"] += ans.output_tokens
         self.usage["calls"] += 1
@@ -173,7 +173,10 @@ class Builder:
             today=self.today.strftime("%A, %B %-d, %Y"), plan=self.plan, n_safety=self.n_safety, n_other=self.n_other
         )
         for attempt in range(3):  # Muse occasionally emits malformed JSON; a retry is cheaper than a dead demo
-            text = self._ask("You are Muse, a careful personal assistant. Output only valid JSON.", prompt, effort="high")
+            # High effort uses ~7.5k tokens incl. reasoning; 8k truncated it. (JSON mode degenerated, so it's off.)
+            text = self._ask(
+                "You are Muse, a careful personal assistant. Output only valid JSON.", prompt, effort="high", max_tokens=20000
+            )
             try:
                 spec = parse_json_object(text)
                 break
