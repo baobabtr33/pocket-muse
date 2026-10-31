@@ -1,0 +1,42 @@
+{
+  "_note": "Stage script. Build the pack first with: uv run python pack.py \"<trip>\". eval.py checks every question takes the expected route.",
+  "trip": "Hiking in Yosemite Valley this weekend, there's no cell signal on the trails",
+  "script": [
+    {
+      "q": "There's a coyote on the trail right in front of me, what do I do?",
+      "route": "LOCAL_EDGE"
+    },
+    {
+      "q": "How do I signal for help with no cell signal?",
+      "route": "LOCAL_EDGE"
+    },
+    {
+      "q": "Which landmark should I look for to head south?",
+      "route": "LOCAL_EDGE"
+    },
+    {
+      "q": "What's the weather tomorrow?",
+      "route": "LOCAL_EDGE"
+    },
+    {
+      "q": "Where should I store my food overnight?",
+      "route": "LOCAL_EDGE"
+    },
+    {
+      "q": "What's the latest news?",
+      "route": "CLOUD"
+    },
+    {
+      "q": "Write a Python function that checks if a word is a palindrome.",
+      "route": "CLOUD"
+    }
+  ],
+  "cloud_holdout": [
+    "Write me a haiku about the ocean",
+    "can you help me study for organic chemistry",
+    "what's the weather in Paris right now",
+    "who is the president of France",
+    "explain how a transformer neural network works",
+    "draft an email to my boss asking for Friday off"
+  ]
+}

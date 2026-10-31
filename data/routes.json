@@ -1,0 +1,32 @@
+{
+  "_note": "Router example phrases. LOCAL_EDGE also gets every practice question from the active pack. CLOUD covers general tasks and live information a pack can't know. Add phrases here to fix misroutes.",
+  "LOCAL_EDGE": [
+    "Hello",
+    "Hi there",
+    "Thanks!",
+    "What can you help me with?",
+    "Who are you?"
+  ],
+  "CLOUD": [
+    "Explain quantum entanglement for my physics homework",
+    "Write a Python script that sorts a list of files by size",
+    "Write a Python function that checks if a word is a palindrome",
+    "Help me write a cover letter for an internship",
+    "Summarize the causes of World War I",
+    "Solve this integral: x squared times e to the x",
+    "Translate this paragraph into Spanish",
+    "Give me feedback on my essay thesis",
+    "Write a poem about friendship",
+    "What's the latest news?",
+    "What happened in the world today?",
+    "What's the stock price of Meta right now?",
+    "Who won the game last night?",
+    "Send a message to my mom",
+    "Book me a restaurant for tonight",
+    "Recommend a good laptop",
+    "What's a good movie to watch?",
+    "How do I center a div in CSS?",
+    "What caused the 2008 financial crisis?",
+    "Plan a two week trip to Japan"
+  ]
+}
