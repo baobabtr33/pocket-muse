@@ -79,6 +79,28 @@ All Meta open models, except the embedder.
 
 That pack cost about $0.27 of Muse tokens (tokens × list price) and about 6 minutes of training.
 
+### Why distill? Couldn't the phone just read the pack?
+
+The pack is small (900 to 2,800 tokens), so the obvious alternative to training is to skip it and put the pack in the prompt when the phone goes offline. We tested that. Same phone model (Llama 3.2 1B, 8-bit), same 35 spoken-test questions from `data/scenarios.json` as text, same pass rule as the phone's self-test:
+
+| Setup | Passed |
+|---|---|
+| Untuned 1B, whole pack in the prompt (no training) | 13/35 |
+| Untuned 1B, retrieved notes in the prompt | 11/35 |
+| Pocket Muse: 1B + pack adapter + retrieved notes | **32/35** |
+
+The untuned 1B model fails both ways. It refuses facts that are right there in its prompt ("That's not in your pack" for the soup, the library hours, the rip-current escape) and answers off-pack questions from its own memory (a pizza poem, a pad thai recipe, a stale "news" answer). Training is how Muse teaches the small model to follow the day's notes: say what the pack says, refuse what it doesn't, in one or two sentences. The facts still come from retrieval; the adapter teaches the behavior.
+
+A bigger model (3B or 8B) follows notes in its prompt better, at more memory and latency on the phone. Untested next step: one general "pack follower" adapter trained once, so a new day needs no training at all.
+
+Reproduce:
+
+```bash
+uv run python eval.py --scenarios                 # student (what the phone runs)
+uv run python eval.py --scenarios --setup rag     # untuned base + retrieved notes
+uv run python eval.py --scenarios --setup full    # untuned base + whole pack in the prompt
+```
+
 ### 1B vs 3B
 
 | | Llama 3.2 1B | Llama 3.2 3B |

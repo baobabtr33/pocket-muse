@@ -74,6 +74,7 @@ Filmed at UC Irvine, Newport Beach and Top of the World (Laguna Beach) with the 
 5. **Newport Beach, no signal.** "Hey Meta, I'm getting pulled out by the water, what do I do?" → "Don't fight the current, swim parallel to shore…"
 6. **Top of the World at sunset, no signal.** "Hey Meta, I'm not getting any signal. Which way is the ocean from here?" and "What time is sunset today?" (exact time from the forecast snapshot).
 7. **How it's developed.** The app's How and Pack tabs: Muse Spark Open (teacher) wrote safety cards first, explained why, and wrote ~450 practice Q&A for about $0.24; Llama 3.2 1B (student) learned them as a 23 MB add-on; answers run on the phone with no network. Off-pack questions ("What's the score of the Lakers game?") are queued for big Muse instead of guessed.
+8. **Why distill, not just paste the pack in?** One slide, one number. The same 1B model with the whole pack in its prompt and no training passes 13 of 35 spoken tests: it refuses facts that are right in front of it and writes the pizza poem anyway. After Muse teaches it, 32 of 35. Line: *"Muse doesn't just hand the small model notes. It teaches it how to use them: say what the pack says, and say 'I'll ask Muse later' for everything else."*
 
 **Privacy: what's true in this prototype, and what to say carefully.**
 

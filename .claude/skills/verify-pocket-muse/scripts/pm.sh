@@ -59,13 +59,14 @@ build)
 selftest)
   dev=$(device); [[ -z "$dev" ]] && { echo "no paired iPhone"; exit 1; }
   mkdir -p "$OUT"
+  started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   echo "Self-test on $dev, evidence in $OUT (takes ~3 min: 25 spoken questions at real-time pace)"
   xcrun devicectl device process launch --console --terminate-existing --device "$dev" -- "$BUNDLE_ID" -selftest \
     2>&1 | tee "$OUT/console.log" | grep --line-buffered -E "SELFTEST|POCKETMUSE"
   xcrun devicectl device copy from --device "$dev" --domain-type appDataContainer \
     --domain-identifier "$BUNDLE_ID" --source Documents/selftest.json --destination "$OUT/selftest.json" >/dev/null 2>&1 \
-    && python3 -c "import json;r=json.load(open('$OUT/selftest.json'));print(f\"report: {r['passed']}/{r['total']} passed, finished {r['finished']}\")" \
-    || echo "FAIL could not pull Documents/selftest.json (app crashed or old build without the report)"
+    && python3 -c "import json,sys;r=json.load(open('$OUT/selftest.json'));print(f\"report: {r['passed']}/{r['total']} passed, finished {r['finished']}\");sys.exit(r['finished']<'$started')" \
+    || echo "FAIL no fresh Documents/selftest.json: the run did not finish (stale report from an earlier run, or app crashed)"
   grep -q "SELFTEST DONE" "$OUT/console.log" || { echo "FAIL no SELFTEST DONE line: see $OUT/console.log"; exit 1; }
   ;;
 launch)
