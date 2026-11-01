@@ -23,7 +23,7 @@ from pathlib import Path
 from huggingface_hub import snapshot_download
 
 from pocketmuse.config import EMBED_MODEL, NOT_IN_PACK, ROOT, SCENARIOS_FILE
-from pocketmuse.pack import Pack, list_packs
+from pocketmuse.pack import Pack, list_packs, resolve_expect
 from pocketmuse.router import load_encoder
 
 OUT = ROOT / "ios" / "Bundle"
@@ -89,7 +89,7 @@ def export_pack(pack: Pack, scenario: dict) -> dict:
     (out / "pack.json").write_text(json.dumps(data, indent=1))
 
     # Spoken test questions, like a real user talking to the glasses.
-    tests = scenario.get("tests", [])
+    tests = [{**t, "expect": resolve_expect(t["expect"], pack.cards)} for t in scenario.get("tests", [])]
     st = OUT / "selftest" / scenario["id"]
     shutil.rmtree(st, ignore_errors=True)
     st.mkdir(parents=True)

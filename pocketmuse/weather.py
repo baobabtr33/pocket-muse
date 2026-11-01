@@ -64,6 +64,6 @@ def forecast_card(name: str, lat: float, lon: float, start: date, days: int) -> 
             f"high {_f(hi)}°F ({hi:.0f}°C), low {_f(lo)}°F ({lo:.0f}°C), "
             f"{rain} chance of precipitation, sunset {sunset}."
         )
-        days.append({"date": day, "text": text})
+        days.append({"date": day, "text": text, "sunset": sunset})
         facts.append(text[:-1] + f" (forecast as of {fetched}).")
     return {"title": "Weather forecast", "facts": facts, "kind": "forecast", "fetched": fetched, "days": days}

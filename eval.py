@@ -27,7 +27,7 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 from pocketmuse.config import DEMO_FILE, NOT_IN_PACK, ROOT, SCENARIOS_FILE, format_card
 from pocketmuse.edge import EdgeModel
-from pocketmuse.pack import Pack, list_packs, resolve
+from pocketmuse.pack import Pack, list_packs, resolve, resolve_expect
 from pocketmuse.router import CLOUD, LOCAL, Router, load_encoder
 
 NUM = re.compile(r"\d+(?:[.:]\d+)?")
@@ -72,6 +72,7 @@ def scenarios():
             a = model.answer(t["q"])
             secs = time.perf_counter() - t0
             refused = NOT_IN_PACK.lower() in a.lower()
+            t = {**t, "expect": resolve_expect(t["expect"], pack.cards)}
             ok = refused if t["expect"] == "REFUSE" else (
                 not refused and any(k in a.lower() for k in t["expect"].lower().split("|")))
             total += 1

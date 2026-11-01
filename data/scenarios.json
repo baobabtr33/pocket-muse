@@ -2,6 +2,81 @@
   "_note": "Days the app can switch between. Build each with: uv run python pack.py --scenario ID. Export all with: uv run python export_ios.py",
   "scenarios": [
     {
+      "id": "uci",
+      "name": "UC Irvine day",
+      "plan": "Today I have class at UC Irvine, then lunch at a UCI dining hall, in the afternoon I'm going to Newport Beach, and at sunset I'm hiking up to Top of the World in Laguna Beach to film.",
+      "notes": "uci.md",
+      "scenes": [
+        {
+          "scene": "Studying, online: ask big Muse a hard question",
+          "online": true,
+          "q": "Explain eigenvalues and eigenvectors intuitively, with a 2x2 example."
+        },
+        {
+          "scene": "Glasses on, no signal: lunch",
+          "online": false,
+          "q": "Hey Meta, where can I get lunch on campus and when is it open?"
+        },
+        {
+          "scene": "Newport Beach: pulled by the water",
+          "online": false,
+          "q": "Hey Meta, I'm getting pulled out by the water, what do I do?"
+        },
+        {
+          "scene": "Top of the World, no signal: which way",
+          "online": false,
+          "q": "Hey Meta, I'm not getting any signal. Which way is the ocean from here?"
+        },
+        {
+          "scene": "Off-topic, no signal: queued",
+          "online": false,
+          "q": "What's the score of the Lakers game?"
+        }
+      ],
+      "tests": [
+        {
+          "q": "Hey Meta, where can I get lunch on campus and when is it open?",
+          "expect": "anteatery|brandywine"
+        },
+        {
+          "q": "When does the dining hall close for lunch?",
+          "expect": "2:00|2 pm|2pm"
+        },
+        {
+          "q": "Where is Brandywine?",
+          "expect": "middle earth|peltason"
+        },
+        {
+          "q": "Hey Meta, I'm getting pulled out by the water, what do I do?",
+          "expect": "parallel"
+        },
+        {
+          "q": "Where's the nearest lifeguard at Newport Beach?",
+          "expect": "lifeguard|tower"
+        },
+        {
+          "q": "Hey Meta, I'm not getting any signal. Which way is the ocean from here?",
+          "expect": "west|south|southwest"
+        },
+        {
+          "q": "What time is sunset today?",
+          "expect": "SUNSET"
+        },
+        {
+          "q": "I saw a rattlesnake on the trail, what should I do?",
+          "expect": "back away|distance|still|step back|give it|space"
+        },
+        {
+          "q": "What's the score of the Lakers game?",
+          "expect": "REFUSE"
+        },
+        {
+          "q": "Write me a poem about pizza.",
+          "expect": "REFUSE"
+        }
+      ]
+    },
+    {
       "id": "school",
       "name": "School day",
       "plan": "Today I'm studying for my linear algebra midterm in the library, then lunch at the dining hall, and after school I'm going to Northfield Beach.",
@@ -126,7 +201,7 @@
         },
         {
           "q": "Hey Meta, my kayak flipped over, how do I stay afloat?",
-          "expect": "kayak|boat|life jacket|pfd|float|hold"
+          "expect": "pfd|life jacket|re-enter|reenter|climb|hold on to|stay with"
         },
         {
           "q": "How do I signal for help with no cell signal?",
@@ -134,7 +209,7 @@
         },
         {
           "q": "I saw a rattlesnake, what should I do?",
-          "expect": "back|away|distance|911|still"
+          "expect": "back away|distance|still|step back|give it"
         },
         {
           "q": "What's the latest news?",
@@ -183,7 +258,7 @@
         },
         {
           "q": "How do I get to the Met?",
-          "expect": "subway|bus|walk|fifth|5th|avenue|train"
+          "expect": "met|museum|fifth|5th|86th|museum mile"
         },
         {
           "q": "When should I get to the Brooklyn Bridge for sunset?",

@@ -145,3 +145,17 @@ class Pack:
 
     def notes_for(self, question: str) -> str:
         return self.index.notes(focus(question))
+
+
+def resolve_expect(expect: str, cards: list[dict], today: date | None = None) -> str:
+    """Test expectations that depend on the pack's live data: SUNSET -> today's sunset time from the forecast."""
+    if expect != "SUNSET":
+        return expect
+    today = (today or date.today()).isoformat()
+    for c in cards:
+        for day in c.get("days", []):
+            m = re.search(r"sunset (\d+:\d+ [AP]M)", day.get("text", ""))
+            if day["date"] == today and (day.get("sunset") or m):
+                return (day.get("sunset") or m.group(1)).lower()
+    return expect
+

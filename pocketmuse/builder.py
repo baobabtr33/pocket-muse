@@ -129,6 +129,14 @@ def forecast_pairs(card: dict, today: date, forecast_index: int) -> list[dict]:
         label = {0: "Today, ", 1: "Tomorrow, "}.get(offset, "")
         answer = f"{label}{day['text']} That's the forecast as of {card['fetched']}; it can't update offline."
         pairs += [{"q": q, "a": answer, "card": forecast_index, "kind": "qa"} for q in qs]
+        sunset = day.get("sunset") or (re.search(r"sunset (\d+:\d+ [AP]M)", day["text"]) or [None, None])[1]
+        if sunset and offset in (0, 1):
+            # The card also holds the fetch time; without exact sunset answers the model read that as sunset.
+            when = "today" if offset == 0 else "tomorrow"
+            sq = [f"What time is sunset {when}?", f"when does the sun set {when}", f"sunset time {when}?",
+                  f"how long until dark {when}", f"when is golden hour {when}"]
+            sa = f"{label}{wd} sunset is at {sunset}, from the forecast as of {card['fetched']}."
+            pairs += [{"q": q, "a": sa, "card": forecast_index, "kind": "qa"} for q in sq]
     return pairs
 
 
