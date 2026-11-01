@@ -122,6 +122,22 @@ Rehearse all three scenes after every rebuild. Packs vary slightly from build to
 
 What's real and what's acted: every answer is produced live on the laptop, with scenes 2 to 4 running fully offline. The glasses themselves are acted and filmed, and `--voice` (the Mac's built-in speech) stands in for their audio.
 
+### iPhone app with the glasses
+
+The same pack runs on an iPhone (`ios/`): Llama 3.2 1B (8-bit) and fact retrieval via MLX Swift, on-device speech recognition, and spoken answers, all with no signal. It listens through the Ray-Ban Meta microphone over Bluetooth and answers through the glasses.
+
+```bash
+uv run python export_ios.py   # quantize the latest pack's model and copy the embedder into ios/Bundle
+ios/run.sh                    # build, install and launch on the connected iPhone (USB is more reliable)
+```
+
+Before the demo:
+
+- In the Meta AI app, turn off "Hey Meta" so the glasses' own assistant doesn't answer too. The app listens for "Hey Meta" or "Hey Muse".
+- On the iPhone, download a Premium voice: Settings > Accessibility > Read & Speak (or Spoken Content) > Voices > English > Ava (Premium). Without it, iOS uses its robotic default voice. Check it in the app's settings (Muse voice: "Ava · Premium").
+- Optional: put `BASETEN_KEY = <key>` in `ios/Secrets.xcconfig` (gitignored) so off-pack questions go to big Muse when online.
+- The scene menu (bottom left) runs each stage question with one tap, as a backup to voice.
+
 ### All demo commands
 
 - Type any question
