@@ -73,14 +73,15 @@ def main():
         builder.today = date.fromisoformat(meta["built"])
         # Regenerate the exact forecast Q&A (their format may have changed); keep Muse's pairs.
         weekdays = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", "Today", "Tomorrow")
-        pairs = [p for p in pairs if not (p["kind"] == "qa" and p["a"].startswith(weekdays) and "it can't update offline." in p["a"])]
+        templated = ("it can't update offline.", " sunset is at ")  # forecast_pairs output, regenerated below
+        pairs = [p for p in pairs if not (p["kind"] == "qa" and p["a"].startswith(weekdays) and any(t in p["a"] for t in templated))]
         for i, card in enumerate(meta["cards"]):
             if card["kind"] == "forecast":
                 pairs += [dict(p, split="train") for p in forecast_pairs(card, builder.today, i)]
         with console.status("Rewriting dataset from the saved pack (no Muse calls)..."):
             builder.write({"title": meta["title"], "location": meta["location"], "cards": meta["cards"]}, pairs)
             fresh = json.loads((pack_dir / "pack.json").read_text())
-            fresh.update({k: meta[k] for k in ("teacher", "build") if k in meta})  # keep the original build stats
+            fresh.update({k: meta[k] for k in ("teacher", "build", "scenario", "reasoning") if k in meta})
             (pack_dir / "pack.json").write_text(json.dumps(fresh, indent=2))
         secs = run_training(pack_dir, args.iters, args.lr)
         console.print(f"Rebuilt [bold]{pack_dir.name}[/] in {secs:.0f}s")

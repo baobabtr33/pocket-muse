@@ -10,6 +10,7 @@
 		104E4E57E133AE033331273F /* Brain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EAAA4E9323EE22A3FA47EEC /* Brain.swift */; };
 		1EF905F8E18A21DDD5BE84C0 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 2C19D46F00ADE7456A1BFA37 /* MLXLMCommon */; };
 		32494CBF5CF91D113B075B09 /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = B99E9F3E13729C5AACA3A1E6 /* MLXLLM */; };
+		40A96E407261A9B09D19A956 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5336430777DC7151252A3774 /* Assets.xcassets */; };
 		4E123F20AB2F6C296CD253C2 /* Bundle in Resources */ = {isa = PBXBuildFile; fileRef = A494394264C25E96B944BFD3 /* Bundle */; };
 		6A37D49C7E495094A0567424 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3216C4C16D961E90EE19BC8 /* ContentView.swift */; };
 		7213C0D316955F2F965BC058 /* Voice.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0964E4E9046C6399FFF68C /* Voice.swift */; };
@@ -20,6 +21,7 @@
 
 /* Begin PBXFileReference section */
 		38DFA6AD9FAC4B208E25EC92 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
+		5336430777DC7151252A3774 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		7B8BAE2AB21E4E8B39EFB5A4 /* Cloud.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cloud.swift; sourceTree = "<group>"; };
 		7C4C9C2742EDD45B07EADC88 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		8EAAA4E9323EE22A3FA47EEC /* Brain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Brain.swift; sourceTree = "<group>"; };
@@ -58,6 +60,7 @@
 			isa = PBXGroup;
 			children = (
 				7C4C9C2742EDD45B07EADC88 /* App.swift */,
+				5336430777DC7151252A3774 /* Assets.xcassets */,
 				8EAAA4E9323EE22A3FA47EEC /* Brain.swift */,
 				7B8BAE2AB21E4E8B39EFB5A4 /* Cloud.swift */,
 				B3216C4C16D961E90EE19BC8 /* ContentView.swift */,
@@ -151,6 +154,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				40A96E407261A9B09D19A956 /* Assets.xcassets in Resources */,
 				4E123F20AB2F6C296CD253C2 /* Bundle in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
