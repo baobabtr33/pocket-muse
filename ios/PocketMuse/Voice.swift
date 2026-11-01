@@ -225,8 +225,11 @@ final class Voice: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         if !voiceID.isEmpty, let v = AVSpeechSynthesisVoice(identifier: voiceID) { return v }
         let us = Self.voices.filter { $0.language == "en-US" }
         let preferred = ["Ava", "Zoe", "Evan", "Samantha"]
-        for name in preferred {
-            if let v = us.first(where: { $0.name.hasPrefix(name) && $0.quality != .default }) { return v }
+        for quality in [AVSpeechSynthesisVoiceQuality.premium, .enhanced] {
+            for name in preferred {
+                if let v = us.first(where: { $0.name.hasPrefix(name) && $0.quality == quality }) { return v }
+            }
+            if let v = us.first(where: { $0.quality == quality }) { return v }
         }
         return us.first ?? AVSpeechSynthesisVoice(language: "en-US")
     }
@@ -241,9 +244,10 @@ final class Voice: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         phase = .speaking
         let u = AVSpeechUtterance(string: text)
         u.voice = voice
-        u.rate = AVSpeechUtteranceDefaultSpeechRate * 1.04
-        u.pitchMultiplier = 1.02
-        u.preUtteranceDelay = 0.15
+        // Natural defaults: premium voices sound best unmodified.
+        u.rate = AVSpeechUtteranceDefaultSpeechRate
+        u.pitchMultiplier = 1.0
+        u.preUtteranceDelay = 0.1
         u.postUtteranceDelay = 0.1
         synth.speak(u)
     }
