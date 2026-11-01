@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 ROUTES_FILE = DATA_DIR / "routes.json"
 DEMO_FILE = DATA_DIR / "demo.json"
+SCENARIOS_FILE = DATA_DIR / "scenarios.json"
 
 # Generated artifacts (gitignored).
 ARTIFACTS = ROOT / "artifacts"

@@ -4,88 +4,132 @@ import MLXEmbedders
 import MLXLLM
 import MLXLMCommon
 
-/// The pack exported by `export_ios.py` (ios/Bundle/pack.json).
-struct PackData: Decodable {
-    struct Card: Decodable { let title: String; let kind: String }
-    struct Fact: Decodable { let card: Int; let text: String }
-    struct Unit: Decodable { let fact: Int; let text: String }
-    struct Practice: Decodable { let q: String; let fact: Int }
-    struct Scene: Decodable, Identifiable {
+/// One day's pack, exported by `export_ios.py` (ios/Bundle/packs/<id>/pack.json).
+struct PackData: Decodable, Sendable {
+    struct Card: Decodable, Sendable, Identifiable {
+        let title: String
+        let kind: String
+        let why: String
+        let facts: [String]
+        var id: String { title }
+    }
+    struct Fact: Decodable, Sendable { let card: Int; let text: String }
+    struct Unit: Decodable, Sendable { let fact: Int; let text: String }
+    struct Practice: Decodable, Sendable { let q: String; let fact: Int }
+    struct Learned: Decodable, Sendable, Identifiable {
+        let q: String
+        let a: String
+        let card: Int?
+        let kind: String
+        var id: String { q + a }
+    }
+    struct Scene: Decodable, Sendable, Identifiable {
         let scene: String
         let online: Bool
         let q: String
         var id: String { q }
     }
+    let id: String
     let name: String
+    let plan: String
     let title: String
+    let reasoning: String
     let student: String
-    let bits: Int
     let not_in_pack: String
     let cards: [Card]
     let facts: [Fact]
     let units: [Unit]
     let practice: [Practice]
+    let learned: [Learned]
     let scenes: [Scene]
     let build: [String: Double]?
 }
 
+struct PackEntry: Decodable, Sendable, Identifiable, Hashable {
+    let id: String
+    let name: String
+    let title: String
+}
+
+struct Answer: Sendable {
+    let text: String
+    let notes: String
+    let notInPack: Bool
+}
+
 enum Bundled {
     static let root = Bundle.main.url(forResource: "Bundle", withExtension: nil)!
-    static var model: URL { root.appending(component: "model") }
+    static var base: URL { root.appending(component: "base") }
     static var embedder: URL { root.appending(component: "embedder") }
-    static var pack: URL { root.appending(component: "pack.json") }
+    static var index: URL { root.appending(component: "index.json") }
+    static func pack(_ id: String) -> URL { root.appending(components: "packs", id) }
+    static func selftest(_ id: String) -> URL { root.appending(components: "selftest", id) }
 }
 
 /// "Hey Meta, what's for lunch?" -> "what's for lunch?". Mirrors pocketmuse.config.strip_wake.
 enum Wake {
-    static let regex = try! NSRegularExpression(
+    static let leading = try! NSRegularExpression(
         pattern: #"^\s*(hey|hi|ok|okay)[\s,]+(meta|muse)[\s,.!:?]*"#, options: [.caseInsensitive])
+    static let anywhere = try! NSRegularExpression(
+        pattern: #"\b(hey|hi|ok|okay)[\s,]+(meta|muse)\b[\s,.!:?]*"#, options: [.caseInsensitive])
 
     static func strip(_ text: String) -> String {
-        let range = NSRange(text.startIndex..., in: text)
-        let out = regex.stringByReplacingMatches(in: text, range: range, withTemplate: "")
-            .trimmingCharacters(in: .whitespaces)
+        let out = leading.stringByReplacingMatches(
+            in: text, range: NSRange(text.startIndex..., in: text), withTemplate: ""
+        ).trimmingCharacters(in: .whitespaces)
         return out.isEmpty ? text : out
     }
 
     /// Where the wake phrase ends inside a running transcript, if it was said.
-    static func find(in text: String) -> String.Index? {
-        let any = try! NSRegularExpression(
-            pattern: #"\b(hey|hi|ok|okay)[\s,]+(meta|muse)\b[\s,.!:?]*"#, options: [.caseInsensitive])
+    static func end(in text: String) -> String.Index? {
         let ns = NSRange(text.startIndex..., in: text)
-        guard let m = any.matches(in: text, range: ns).last, let r = Range(m.range, in: text) else { return nil }
+        guard let m = anywhere.matches(in: text, range: ns).last, let r = Range(m.range, in: text) else { return nil }
         return r.upperBound
     }
 }
 
-/// Pocket Muse on the phone: the pack's fused Llama 3.2 student plus the same fact retrieval it was
-/// trained with (pocketmuse.pack.FactIndex), all on-device.
+/// Pocket Muse on the phone: Llama 3.2 1B (8-bit, shared) plus the day's LoRA adapter, and the same
+/// fact retrieval the student was trained with (pocketmuse.pack.FactIndex). All on-device.
 actor Brain {
-    let pack: PackData
+    let index: [PackEntry]
+    private(set) var pack: PackData?
     private var llm: MLXLMCommon.ModelContainer?
     private var embedder: MLXEmbedders.ModelContainer?
+    private var adapter: LoRAContainer?
     private var unitVecs: [[Float]] = []
     private var practiceVecs: [[Float]] = []
 
     init() throws {
-        pack = try JSONDecoder().decode(PackData.self, from: Data(contentsOf: Bundled.pack))
+        index = try JSONDecoder().decode([PackEntry].self, from: Data(contentsOf: Bundled.index))
     }
 
     func load(progress: @escaping @Sendable (String) -> Void) async throws {
         MLX.GPU.set(cacheLimit: 256 * 1024 * 1024)
         progress("Loading embedder")
-        let emb = try await MLXEmbedders.loadModelContainer(
+        embedder = try await MLXEmbedders.loadModelContainer(
             configuration: MLXEmbedders.ModelConfiguration(directory: Bundled.embedder))
-        embedder = emb
-        progress("Indexing \(pack.units.count) pack facts")
-        unitVecs = try await embed(pack.units.map(\.text))
-        practiceVecs = try await embed(pack.practice.map(\.q))
-        progress("Loading Llama 3.2 student")
+        progress("Loading Llama 3.2 1B")
         llm = try await LLMModelFactory.shared.loadContainer(
-            configuration: MLXLMCommon.ModelConfiguration(directory: Bundled.model))
-        progress("Warming up")
-        _ = try await answer("hello")
-        progress("Ready")
+            configuration: MLXLMCommon.ModelConfiguration(directory: Bundled.base))
+    }
+
+    /// Swap in another day's pack: its adapter (what Muse taught Llama) and its facts.
+    func use(_ id: String) async throws -> PackData {
+        guard let llm else { throw CocoaError(.featureUnsupported) }
+        let dir = Bundled.pack(id)
+        let data = try JSONDecoder().decode(PackData.self, from: Data(contentsOf: dir.appending(component: "pack.json")))
+        let new = try LoRAContainer.from(directory: dir.appending(component: "adapter"))
+        let old = adapter
+        try await llm.perform { context in
+            if let old { context.model.unload(adapter: old) }
+            try context.model.load(adapter: new)
+        }
+        adapter = new
+        pack = data
+        unitVecs = try await embed(data.units.map(\.text))
+        practiceVecs = try await embed(data.practice.map(\.q))
+        _ = try await answer("hello")  // warm up so the first real question is fast
+        return data
     }
 
     // MARK: Retrieval (port of FactIndex)
@@ -95,19 +139,18 @@ actor Brain {
         var out: [[Float]] = []
         for start in stride(from: 0, to: texts.count, by: 32) {
             let batch = Array(texts[start ..< min(start + 32, texts.count)])
-            let vecs = await embedder.perform { model, tokenizer, _ -> [[Float]] in
+            out += await embedder.perform { model, tokenizer, _ -> [[Float]] in
                 let ids = batch.map { Array(tokenizer.encode(text: $0, addSpecialTokens: true).prefix(512)) }
                 let maxLen = ids.map(\.count).max() ?? 1
                 let padded = stacked(ids.map { MLXArray($0 + Array(repeating: 0, count: maxLen - $0.count)) })
-                let mask = padded .!= 0
-                let out = model(padded, positionIds: nil, tokenTypeIds: MLXArray.zeros(like: padded), attentionMask: mask)
+                let out = model(padded, positionIds: nil, tokenTypeIds: MLXArray.zeros(like: padded),
+                                attentionMask: padded .!= 0)
                 // bge uses the [CLS] hidden state, L2-normalized (as sentence-transformers does).
                 var cls = out.hiddenStates![0..., 0, 0...]
                 cls = cls / MLX.sqrt(MLX.sum(cls * cls, axis: -1, keepDims: true))
                 cls.eval()
                 return (0 ..< batch.count).map { cls[$0].asArray(Float.self) }
             }
-            out += vecs
         }
         return out
     }
@@ -148,6 +191,7 @@ actor Brain {
     }
 
     func notes(for question: String, k: Int = 4) async throws -> String {
+        guard let pack else { return "" }
         let q = Self.focus(question)
         guard let qv = try await embed([q]).first else { return "" }
         var scores = [Float](repeating: -1, count: pack.facts.count)
@@ -160,9 +204,8 @@ actor Brain {
             scores[pack.practice[i].fact] += 0.1 * sims[i]
         }
         var picked = Array(scores.indices.sorted { scores[$0] > scores[$1] }.prefix(k))
-        // Forecast days in date order (today first), as in training.
-        let isForecast = { (i: Int) in self.pack.cards[self.pack.facts[i].card].kind == "forecast" }
-        var forecast = picked.filter(isForecast).sorted()
+        let isForecast = { (i: Int) in pack.cards[pack.facts[i].card].kind == "forecast" }
+        var forecast = picked.filter(isForecast).sorted()  // forecast days in date order, as in training
         picked = picked.map { isForecast($0) ? forecast.removeFirst() : $0 }
 
         var order: [Int] = []
@@ -180,26 +223,27 @@ actor Brain {
 
     // MARK: Answer
 
-    func systemPrompt(notes: String) -> String {
+    /// Training and inference use this exact prompt (pocketmuse.config.student_system_prompt).
+    func systemPrompt(title: String, notes: String) -> String {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "EEEE, MMMM d"
-        return "You are Pocket Muse, the on-device part of Muse. Muse prepared you ahead for: \(pack.title). "
+        return "You are Pocket Muse, the on-device part of Muse. Muse prepared you ahead for: \(title). "
             + "Today is \(f.string(from: Date())).\n"
             + "Answer in 1-2 short sentences using only the pack notes below. "
-            + "If the notes do not answer the question, say \"\(pack.not_in_pack)\" and that you will ask Muse "
+            + "If the notes do not answer the question, say \"That's not in your pack\" and that you will ask Muse "
             + "when you're online.\n\n"
             + "Pack notes:\n\(notes.isEmpty ? "(none)" : notes)"
     }
 
-    func answer(_ raw: String, maxTokens: Int = 120) async throws -> String {
-        guard let llm else { return "" }
+    func answer(_ raw: String, maxTokens: Int = 120) async throws -> Answer {
+        guard let llm, let pack else { throw CocoaError(.featureUnsupported) }
         let question = Wake.strip(raw)
         let notes = try await notes(for: question)
-        let input = UserInput(chat: [.system(systemPrompt(notes: notes)), .user(question)])
+        let input = UserInput(chat: [.system(systemPrompt(title: pack.title, notes: notes)), .user(question)])
         var params = GenerateParameters(maxTokens: maxTokens, temperature: 0)
         params.prefillStepSize = 512
-        return try await llm.perform { context in
+        let text = try await llm.perform { context in
             let lmInput = try await context.processor.prepare(input: input)
             var text = ""
             for await item in try MLXLMCommon.generate(input: lmInput, parameters: params, context: context) {
@@ -207,9 +251,7 @@ actor Brain {
             }
             return text.trimmingCharacters(in: .whitespacesAndNewlines)
         }
-    }
-
-    func isNotInPack(_ text: String) -> Bool {
-        text.lowercased().contains(pack.not_in_pack.lowercased())
+        return Answer(text: text, notes: notes,
+                      notInPack: text.lowercased().contains(pack.not_in_pack.lowercased()))
     }
 }

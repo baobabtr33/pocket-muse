@@ -9,7 +9,11 @@
    Scored by key terms (numbers and names from the reference answer) found in the answer, and
    invented numbers (numbers in the answer that appear nowhere in the pack's notes).
 
+3. --scenarios: every day in data/scenarios.json, its spoken-test questions answered the way the phone
+   answers them (8-bit base from ios/Bundle + the pack adapter), with the phone's pass rule.
+
 Usage: uv run python eval.py [--pack NAME] [-n 40] [--no-base]
+       uv run python eval.py --scenarios
 """
 
 import argparse
@@ -21,9 +25,9 @@ import time
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
-from pocketmuse.config import DEMO_FILE, NOT_IN_PACK, format_card
+from pocketmuse.config import DEMO_FILE, NOT_IN_PACK, ROOT, SCENARIOS_FILE, format_card
 from pocketmuse.edge import EdgeModel
-from pocketmuse.pack import Pack, resolve
+from pocketmuse.pack import Pack, list_packs, resolve
 from pocketmuse.router import CLOUD, LOCAL, Router, load_encoder
 
 NUM = re.compile(r"\d+(?:[.:]\d+)?")
@@ -43,13 +47,49 @@ def score(answer: str, terms: set[str]) -> float:
     return sum(t.lower() in low for t in terms) / len(terms)
 
 
+def scenarios():
+    """Same check as the app's self-test (AppModel.check), minus speech recognition."""
+    from mlx_lm import load
+
+    encoder = load_encoder()
+    built = {}
+    for path in list_packs():
+        sid = json.loads((path / "pack.json").read_text()).get("scenario")
+        built.setdefault(sid, path)
+    phone_base = ROOT / "ios" / "Bundle" / "base"
+    total = passed = 0
+    for sc in json.loads(SCENARIOS_FILE.read_text())["scenarios"]:
+        if sc["id"] not in built:
+            print(f"-- {sc['name']}: not built")
+            continue
+        pack = Pack(built[sc["id"]], encoder)
+        model = EdgeModel(pack)
+        if phone_base.exists():
+            model.model, model.tokenizer = load(str(phone_base), adapter_path=str(pack.adapter))
+        print(f"-- {sc['name']}: {pack.title}")
+        for t in sc.get("tests", []):
+            t0 = time.perf_counter()
+            a = model.answer(t["q"])
+            secs = time.perf_counter() - t0
+            refused = NOT_IN_PACK.lower() in a.lower()
+            ok = refused if t["expect"] == "REFUSE" else (
+                not refused and any(k in a.lower() for k in t["expect"].lower().split("|")))
+            total += 1
+            passed += ok
+            print(f"   {'PASS' if ok else 'FAIL'} {secs:.2f}s  {t['q']}\n        {a}")
+    print(f"\n{passed}/{total} passed")
+
+
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--scenarios", action="store_true", help="check every day in data/scenarios.json")
     ap.add_argument("--pack")
     ap.add_argument("-n", type=int, default=40, help="held-out questions to answer")
     ap.add_argument("--no-base", action="store_true")
     ap.add_argument("--routing-only", action="store_true")
     args = ap.parse_args()
+    if args.scenarios:
+        return scenarios()
 
     encoder = load_encoder()
     pack = Pack(resolve(args.pack), encoder)

@@ -1,0 +1,203 @@
+{
+  "_note": "Days the app can switch between. Build each with: uv run python pack.py --scenario ID. Export all with: uv run python export_ios.py",
+  "scenarios": [
+    {
+      "id": "school",
+      "name": "School day",
+      "plan": "Today I'm studying for my linear algebra midterm in the library, then lunch at the dining hall, and after school I'm going to Northfield Beach.",
+      "notes": "today.md",
+      "scenes": [
+        {
+          "scene": "Studying, online: ask big Muse a hard question",
+          "online": true,
+          "q": "Explain eigenvalues and eigenvectors intuitively, with a 2x2 example."
+        },
+        {
+          "scene": "Glasses on, no signal: lunch",
+          "online": false,
+          "q": "Hey Meta, what's the menu for lunch?"
+        },
+        {
+          "scene": "At the beach, no signal: emergency kit",
+          "online": false,
+          "q": "Hey Meta, I'm not getting any signal. Do you have any idea where the closest emergency kit is?"
+        },
+        {
+          "scene": "Pulled by the water",
+          "online": false,
+          "q": "I'm getting pulled out by the water, what do I do?"
+        },
+        {
+          "scene": "Off-topic, no signal: queued",
+          "online": false,
+          "q": "What's the score of the Warriors game?"
+        }
+      ],
+      "tests": [
+        {
+          "q": "Hey Meta, what's the menu for lunch?",
+          "expect": "pizza|caesar|stir-fry"
+        },
+        {
+          "q": "what's for lunch today",
+          "expect": "pizza|caesar|stir-fry"
+        },
+        {
+          "q": "Is there anything vegan for lunch?",
+          "expect": "tofu|stir-fry|vegan"
+        },
+        {
+          "q": "what's the soup today",
+          "expect": "tomato"
+        },
+        {
+          "q": "when does the library close",
+          "expect": "midnight|12"
+        },
+        {
+          "q": "Hey Meta, I'm not getting any signal. Do you have any idea where the closest emergency kit is?",
+          "expect": "tower 2"
+        },
+        {
+          "q": "where's the first aid kit at the beach",
+          "expect": "tower 2|snack shack"
+        },
+        {
+          "q": "I'm getting pulled out by the water, what do I do?",
+          "expect": "parallel"
+        },
+        {
+          "q": "How do I call for help with no signal?",
+          "expect": "call box|red button"
+        },
+        {
+          "q": "What's the weather this afternoon?",
+          "expect": "°f|degrees|cloud|sun|rain|fog"
+        },
+        {
+          "q": "How tall is Mount Everest?",
+          "expect": "REFUSE"
+        },
+        {
+          "q": "What's the score of the Warriors game?",
+          "expect": "REFUSE"
+        }
+      ]
+    },
+    {
+      "id": "trip",
+      "name": "Trip day",
+      "plan": "This Saturday I'm hiking the Dipsea Trail on Mount Tamalpais in the morning, then kayaking out of Sausalito in the afternoon.",
+      "scenes": [
+        {
+          "scene": "On the trail: coyote",
+          "online": false,
+          "q": "Hey Meta, there's a coyote on the trail right in front of me, what do I do?"
+        },
+        {
+          "scene": "Lost: which way is south",
+          "online": false,
+          "q": "Hey Meta, which landmark should I look for to head south?"
+        },
+        {
+          "scene": "Kayak flipped",
+          "online": false,
+          "q": "Hey Meta, my kayak flipped over, how do I stay afloat?"
+        },
+        {
+          "scene": "Signal for help",
+          "online": false,
+          "q": "How do I signal for help with no cell signal?"
+        },
+        {
+          "scene": "Off-topic, no signal: queued",
+          "online": false,
+          "q": "What's the latest news?"
+        }
+      ],
+      "tests": [
+        {
+          "q": "Hey Meta, there's a coyote on the trail right in front of me, what do I do?",
+          "expect": "loud|big|back away|wave|yell|don't run|do not run"
+        },
+        {
+          "q": "which landmark should I look for to head south?",
+          "expect": "south|golden gate|bridge|ocean|bay"
+        },
+        {
+          "q": "Hey Meta, my kayak flipped over, how do I stay afloat?",
+          "expect": "kayak|boat|life jacket|pfd|float|hold"
+        },
+        {
+          "q": "How do I signal for help with no cell signal?",
+          "expect": "whistle|mirror|three|sos|911"
+        },
+        {
+          "q": "I saw a rattlesnake, what should I do?",
+          "expect": "back|away|distance|911|still"
+        },
+        {
+          "q": "What's the latest news?",
+          "expect": "REFUSE"
+        },
+        {
+          "q": "What's the recipe for pad thai?",
+          "expect": "REFUSE"
+        }
+      ]
+    },
+    {
+      "id": "city",
+      "name": "City weekend",
+      "plan": "This weekend I'm visiting New York City: I land at JFK on Saturday morning, take the subway to my hotel in Midtown, visit the Metropolitan Museum of Art, and walk across the Brooklyn Bridge at sunset.",
+      "scenes": [
+        {
+          "scene": "Landed at JFK, no data",
+          "online": false,
+          "q": "Hey Meta, how do I get from JFK to Midtown by subway?"
+        },
+        {
+          "scene": "Lost in the city",
+          "online": false,
+          "q": "Hey Meta, I lost my phone signal, how do I find my way back to Midtown?"
+        },
+        {
+          "scene": "Emergency",
+          "online": false,
+          "q": "What number do I call in an emergency here?"
+        },
+        {
+          "scene": "Off-topic, no signal: queued",
+          "online": false,
+          "q": "Write me a poem about pizza."
+        }
+      ],
+      "tests": [
+        {
+          "q": "Hey Meta, how do I get from JFK to Midtown by subway?",
+          "expect": "airtrain|e train|a train|subway|jamaica|howard beach"
+        },
+        {
+          "q": "What number do I call in an emergency here?",
+          "expect": "911"
+        },
+        {
+          "q": "How do I get to the Met?",
+          "expect": "subway|bus|walk|fifth|5th|avenue|train"
+        },
+        {
+          "q": "When should I get to the Brooklyn Bridge for sunset?",
+          "expect": "pm|sunset|before"
+        },
+        {
+          "q": "Write me a poem about pizza.",
+          "expect": "REFUSE"
+        },
+        {
+          "q": "Who won the World Series?",
+          "expect": "REFUSE"
+        }
+      ]
+    }
+  ]
+}

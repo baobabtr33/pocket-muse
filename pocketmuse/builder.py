@@ -132,6 +132,16 @@ def forecast_pairs(card: dict, today: date, forecast_index: int) -> list[dict]:
     return pairs
 
 
+EXPLAIN_PROMPT = """The user said what's coming up: "{plan}"
+You (Muse) prepared these note cards so a tiny on-device model can answer with no signal:
+
+{cards}
+
+Explain your thinking to the user, plainly and briefly. Return ONE JSON object and nothing else:
+{{"reasoning": "2-4 sentences: what you expect their day to need, what could go wrong, and why you put safety first",
+  "why": ["one short sentence per card, in the same order: the moment they'd need this card"]}}"""
+
+
 def parse_json_object(text: str) -> dict:
     return json.loads(text[text.index("{") : text.rindex("}") + 1])
 
@@ -208,6 +218,19 @@ class Builder:
         ]
         spec["cards"].sort(key=lambda c: c["kind"] != "safety")  # safety first, stable otherwise
         return spec
+
+    def explain(self, spec: dict) -> None:
+        """Muse's reasoning for the pack, shown in the app: why these cards, and when each one helps."""
+        cards = "\n\n".join(f"{i + 1}. [{c['kind']}] {format_card(c)}" for i, c in enumerate(spec["cards"]))
+        try:
+            text = self._ask("You are Muse. Output only valid JSON.", EXPLAIN_PROMPT.format(plan=self.plan, cards=cards))
+            out = parse_json_object(text)
+        except Exception as e:  # reasoning is nice to have; never fail a build over it
+            self.log(f"  [yellow]no reasoning ({type(e).__name__})[/]")
+            return
+        spec["reasoning"] = str(out.get("reasoning", ""))
+        for c, why in zip(spec["cards"], out.get("why", [])):
+            c["why"] = str(why)
 
     def add_forecast(self, spec: dict) -> dict | None:
         loc = spec.get("location")
@@ -320,6 +343,7 @@ class Builder:
             "notes": self.notes,
             "built": self.today.isoformat(),
             "location": spec.get("location"),
+            "reasoning": spec.get("reasoning", ""),
             "cards": cards,
             "student": STUDENTS[self.student],
             "teacher": {"provider": self.cloud.provider, "model": self.cloud.spec["model"], **self.usage},

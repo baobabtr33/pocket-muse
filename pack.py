@@ -25,7 +25,7 @@ from rich.progress import BarColumn, Progress, TextColumn, TimeElapsedColumn
 
 from pocketmuse.builder import Builder, forecast_pairs
 from pocketmuse.cloud import token_cost
-from pocketmuse.config import DATA_DIR, DEFAULT_STUDENT, DEMO_FILE, STUDENTS
+from pocketmuse.config import DATA_DIR, DEFAULT_STUDENT, DEMO_FILE, SCENARIOS_FILE, STUDENTS
 from pocketmuse.pack import resolve
 from pocketmuse.train import fuse, train
 
@@ -50,6 +50,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("plan", nargs="?", help="what's coming up, in plain words")
     ap.add_argument("--demo", action="store_true", help="use the stage plan from data/demo.json")
+    ap.add_argument("--scenario", help="build a day from data/scenarios.json (school, trip, city)")
+    ap.add_argument("--explain", metavar="PACK", help="add Muse's reasoning to an existing pack (one cheap Muse call)")
     ap.add_argument("--notes", help="a text/Markdown file of facts Muse can't know (menus, places, kit locations)")
     ap.add_argument("--student", choices=sorted(STUDENTS), default=DEFAULT_STUDENT, help="Llama 3.2 size")
     ap.add_argument("--rebuild", metavar="PACK", help="rewrite an existing pack's dataset (no Muse calls) and retrain")
@@ -88,6 +90,22 @@ def main():
         secs = run_training(pack_dir, args.iters, args.lr)
         console.print(f"Retrained [bold]{pack_dir.name}[/] in {secs:.0f}s")
         return
+    if args.explain:
+        pack_dir = resolve(args.explain) if args.explain != "latest" else resolve(None)
+        meta = json.loads((pack_dir / "pack.json").read_text())
+        b = Builder(meta["plan"], "1b", log=console.print)
+        b.explain(meta)
+        (pack_dir / "pack.json").write_text(json.dumps(meta, indent=2))
+        console.print(f"[bold green]✓[/] {pack_dir.name}: {meta.get('reasoning', '(none)')}")
+        return
+    scenario = None
+    if args.scenario:
+        scenario = next((s for s in json.loads(SCENARIOS_FILE.read_text())["scenarios"] if s["id"] == args.scenario), None)
+        if not scenario:
+            ap.error(f"no scenario {args.scenario!r} in data/scenarios.json")
+        args.plan = scenario["plan"]
+        if scenario.get("notes") and not args.notes:
+            args.notes = (DATA_DIR / scenario["notes"]).as_posix()
     if args.demo:
         demo = json.loads(DEMO_FILE.read_text())
         args.plan = demo["plan"]
@@ -119,6 +137,11 @@ def main():
     if fc:
         console.print(f"[bold green]✓[/] Forecast snapshot: {fc['facts'][1]}")
 
+    with console.status("Muse is explaining its thinking..."):
+        builder.explain(spec)
+    if spec.get("reasoning"):
+        console.print(f"[bold green]✓[/] Muse's reasoning: [dim]{spec['reasoning']}[/]")
+
     with Progress(
         TextColumn("[bold]Muse is writing practice questions[/]"), BarColumn(),
         TextColumn("{task.completed}/{task.total} cards · {task.fields[pairs]} Q&A"), TimeElapsedColumn(),
@@ -145,6 +168,8 @@ def main():
     adapter_mb = sum(f.stat().st_size for f in (pack_dir / "adapters").glob("adapters.safetensors")) / 1e6
 
     meta = json.loads((pack_dir / "pack.json").read_text())
+    if scenario:
+        meta["scenario"] = scenario["id"]
     meta["build"] = {
         "teach_seconds": round(t_teach, 1),
         "train_seconds": round(t_train, 1),
