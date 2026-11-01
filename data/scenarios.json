@@ -2,6 +2,103 @@
   "_note": "Days the app can switch between. Build each with: uv run python pack.py --scenario ID. Export all with: uv run python export_ios.py",
   "scenarios": [
     {
+      "id": "oc",
+      "name": "Orange County day",
+      "plan": "Today I'm studying at the Newport Beach Central Library in the morning, then class at UC Irvine and lunch at a UCI dining hall, in the afternoon I'm exploring the tide pools and the Historic District at Crystal Cove State Park, and at sunset I'm at the Huntington Beach pier for a bonfire.",
+      "notes": "oc.md",
+      "scenes": [
+        {
+          "scene": "Studying, online: ask big Muse a hard question",
+          "online": true,
+          "q": "Explain eigenvalues and eigenvectors intuitively, with a 2x2 example."
+        },
+        {
+          "scene": "Library: when does it close",
+          "online": false,
+          "q": "Hey Meta, what time does the library close today?"
+        },
+        {
+          "scene": "Glasses on, no signal: lunch",
+          "online": false,
+          "q": "Hey Meta, where can I get lunch on campus and when is it open?"
+        },
+        {
+          "scene": "Crystal Cove tide pools",
+          "online": false,
+          "q": "Hey Meta, can I take a shell home from the tide pools?"
+        },
+        {
+          "scene": "Huntington Beach: pulled by the water",
+          "online": false,
+          "q": "Hey Meta, I'm getting pulled out by the water, what do I do?"
+        },
+        {
+          "scene": "Huntington Beach: bonfire",
+          "online": false,
+          "q": "Hey Meta, where are the fire pits?"
+        },
+        {
+          "scene": "Off-topic, no signal: queued",
+          "online": false,
+          "q": "What's the score of the Lakers game?"
+        }
+      ],
+      "tests": [
+        {
+          "q": "Hey Meta, what time does the library close today?",
+          "expect": "9pm|9 pm|6pm|6 pm|5pm|5 pm|9:00|6:00|5:00"
+        },
+        {
+          "q": "Where is the Newport Beach library?",
+          "expect": "avocado"
+        },
+        {
+          "q": "Hey Meta, where can I get lunch on campus and when is it open?",
+          "expect": "anteatery|brandywine"
+        },
+        {
+          "q": "When does the dining hall close for lunch?",
+          "expect": "2:00|2 pm|2pm"
+        },
+        {
+          "q": "How much is parking at Crystal Cove?",
+          "expect": "$5|$15|5 per hour|15"
+        },
+        {
+          "q": "Hey Meta, can I take a shell home from the tide pools?",
+          "expect": "no|prohibited|not allowed|don't"
+        },
+        {
+          "q": "Can I bring my dog on the beach at Crystal Cove?",
+          "expect": "no|not allowed|paved"
+        },
+        {
+          "q": "Hey Meta, I'm getting pulled out by the water, what do I do?",
+          "expect": "parallel"
+        },
+        {
+          "q": "Hey Meta, where are the fire pits?",
+          "expect": "first street|beach blvd|beach boulevard"
+        },
+        {
+          "q": "When does Huntington Beach close tonight?",
+          "expect": "10pm|10 pm|10:00"
+        },
+        {
+          "q": "What time is sunset today?",
+          "expect": "SUNSET"
+        },
+        {
+          "q": "What's the score of the Lakers game?",
+          "expect": "REFUSE"
+        },
+        {
+          "q": "Write me a poem about pizza.",
+          "expect": "REFUSE"
+        }
+      ]
+    },
+    {
       "id": "uci",
       "name": "UC Irvine day",
       "plan": "Today I have class at UC Irvine, then lunch at a UCI dining hall, in the afternoon I'm going to Newport Beach, and at sunset I'm hiking up to Top of the World in Laguna Beach to film.",

@@ -18,7 +18,7 @@ This is the stage demo. Every answer below is a real, measured run on a MacBook 
 
 The lunch menu and the kit location aren't things a model can know. They come from a short notes file ([`data/today.md`](data/today.md)) that Muse turns into the pack, word for word. Muse is told never to invent a menu or a kit location.
 
-See [`IDEAS.md`](IDEAS.md) for the pitch and the full demo script.
+See [`IDEAS.md`](IDEAS.md) for the pitch, and [`script.md`](script.md) for the filming script of the Orange County day (Newport Beach library, UC Irvine, Crystal Cove, Huntington Beach; pack `oc`, notes in `data/oc.md`, 12 of 13 spoken tests on the Mac).
 
 ## How it's developed
 
