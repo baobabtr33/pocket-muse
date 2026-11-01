@@ -94,6 +94,7 @@ final class AppModel: ObservableObject {
         ready = false
         status = "Loading \(packs.first { $0.id == id }?.name ?? id)"
         pack = try await brain.use(id)
+        voice.vocabulary = await brain.vocabulary()
         UserDefaults.standard.set(id, forKey: "pack")
         turns = []
         ready = true

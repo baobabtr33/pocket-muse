@@ -452,6 +452,10 @@ struct HowView: View {
                          text: "Your voice becomes text on the phone. A fact search picks the 4 most relevant pack "
                             + "notes, and Llama answers from them in about a second, for $0, with no signal. "
                             + "If the pack doesn't cover it, big Muse answers when online, or it's queued.")
+                    Step(n: 5, title: "Private by design",
+                         text: "Questions you ask here, and the answers, never leave this phone: speech, search and "
+                            + "Llama all run on-device. Only building the pack and off-pack questions when online "
+                            + "use the cloud. In the product, Muse's thinking ahead runs in Meta's Private Processing.")
                 } header: {
                     Text("How \(p?.name ?? "this pack") was made")
                 }

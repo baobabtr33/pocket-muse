@@ -65,24 +65,30 @@ The architecture is the product: the big model thinks ahead while connected, a s
 
 ## The demo
 
-Setup before going on stage: edit `data/today.md` with the real menu, places and emergency info, build the pack (`uv run python pack.py --demo`, about 5 minutes), and run `uv run python demo.py --voice`. Scenes 1-5 are filmed or acted; the terminal commands are what runs live.
+Filmed at UC Irvine, Newport Beach and Top of the World (Laguna Beach) with the iPhone app (`ios/`) and Ray-Ban Meta glasses. Pack: **UC Irvine day** (`uv run python pack.py --scenario uci`, notes in `data/uci.md`). Before filming: fill in the real lunch menu and class in `data/uci.md`, rebuild the day before, install with `ios/run.sh --export`, and run the self-test from the How tab (or `pm.sh selftest`).
 
-1. **Studying, online.** The user, wearing glasses, studies at the computer and asks Muse a hard question: `/scene 1` ("Explain eigenvalues and eigenvectors intuitively, with a 2x2 example"). Big Muse answers from the cloud. Meanwhile Muse already knows the day: library, lunch, beach.
-2. **Done with work, glasses on.** "Oh, I'm not getting any signal."
-3. **"Hey Meta, what's the menu for lunch?"** `/scene 2`. The router keeps it on-device; Llama answers from the pack in under a second, for $0, with no network: "margherita pizza, grilled chicken Caesar salad, and vegetable stir-fry with tofu (vegan)", spoken aloud with `--voice`.
-4. **Go to lunch**, filmed through the glasses.
-5. **After school, at the beach, no signal.** "Hey Meta, I'm not getting any signal. Do you have any idea where the closest emergency kit is?" `/scene 3`: "Emergency kit with AED inside Lifeguard Tower 2 at bottom of Shore Path stairs..."
-6. **How it's developed.** `/how` shows this pack's real build record:
-   - **Teacher:** Muse Spark Open (Meta's open 816B model) read the day plus the user's notes and wrote safety cards first (rip currents, the emergency call box, kit and AED locations, landmark navigation), then cards for the day, plus a live forecast snapshot. It wrote about 300 practice Q&A pairs in about 30 seconds, for about $0.15.
-   - **Student:** Llama 3.2 1B, LoRA fine-tuned on those pairs on the laptop with MLX in about 5 minutes, then fused: a 23 MB adapter.
-   - **In the moment:** on-device inference only. The knowledge was learned beforehand, so no network is needed. Anything outside the pack goes to big Muse when online, or is queued.
-7. Optional: ask something off-pack offline ("What's the latest news?"), show it queued, then `/online` and `/sync`.
+1. **Studying, online.** At the laptop: "Explain eigenvalues and eigenvectors intuitively, with a 2x2 example." Big Muse answers from the cloud. Line: *"Muse already knows my day: class, lunch, Newport, sunset at Top of the World."*
+2. **Privacy beat (say it here, while Muse is shown knowing the schedule).** *"Muse knowing my schedule is private by design. Meta built Private Processing so that personal context from AI glasses is processed in confidential virtual machines that even Meta can't see into. And once the pack is on my phone, every question I ask in the moment stays on the device: it's answered locally, never sent anywhere."*
+3. **Done with class, glasses on, no signal.** "Hey Meta, where can I get lunch on campus and when is it open?" Answered on the phone in about a second, spoken in the glasses.
+4. **Lunch**, filmed through the glasses.
+5. **Newport Beach, no signal.** "Hey Meta, I'm getting pulled out by the water, what do I do?" → "Don't fight the current, swim parallel to shore…"
+6. **Top of the World at sunset, no signal.** "Hey Meta, I'm not getting any signal. Which way is the ocean from here?" and "What time is sunset today?" (exact time from the forecast snapshot).
+7. **How it's developed.** The app's How and Pack tabs: Muse Spark Open (teacher) wrote safety cards first, explained why, and wrote ~450 practice Q&A for about $0.24; Llama 3.2 1B (student) learned them as a 23 MB add-on; answers run on the phone with no network. Off-pack questions ("What's the score of the Lakers game?") are queued for big Muse instead of guessed.
+
+**Privacy: what's true in this prototype, and what to say carefully.**
+
+- True today: questions asked in the moment, and their answers, never leave the phone. Speech recognition, retrieval and Llama all run on-device, with or without signal. That's the honest headline.
+- True today: the only cloud calls are building the pack (Muse reads the one-sentence plan and the notes file) and off-pack questions when online.
+- Not true of this prototype: the pack build calls the open Muse Spark model through Baseten's API, not Meta's Private Processing. Say it as the product design ("in the product, Muse thinks ahead inside Meta's Private Processing"), not as what this demo ran on.
+
+Meta's own wording, for reference: Private Processing is Meta's "confidential computing infrastructure for AI workloads", running in confidential virtual machines backed by hardware trusted execution environments, which "extends the trust boundary" of AI glasses into the data center. The glasses verify the environment against a public transparency ledger before sending personal context. Source: Meta Engineering, "Private Processing for Meta AI glasses" (engineering.fb.com, 2026-09-23).
 
 ### Demo risk plan
 
-- Building takes about 5 minutes with Llama 3.2 1B (about 30 seconds of Muse, about 4.5 minutes of training). Build it before going on stage; if you show a live build, keep the finished pack ready to switch to.
-- Run `uv run python eval.py` on the stage pack, and rehearse the exact script questions.
-- Rehearsed cloud answers are cached, so `/sync` still works if venue Wi-Fi is flaky.
+- Run the phone self-test after every rebuild; read what it *heard* as well as the answer.
+- Packs vary build to build. Rebuild the day before filming (fresh forecast and sunset), then re-test.
+- The scene menu (bottom left on the Muse tab) runs each stage question with one tap if voice misfires.
+- Turn off "Hey Meta" in the Meta AI app so the glasses' own assistant doesn't answer too.
 
 ## Pitch
 

@@ -32,7 +32,19 @@ def focus(question: str) -> str:
     Preamble sentences otherwise pull retrieval toward the wrong facts (here: the no-signal call box)."""
     parts = [p.strip() for p in SENTENCE.split(question.strip()) if p.strip()]
     asks = [p for p in parts if p.endswith("?")]
-    return asks[-1] if len(parts) > 1 and asks else question
+    # "I saw a rattlesnake. What should I do?": a generic ask carries no topic, so keep the whole question.
+    if len(parts) > 1 and asks and len(content_words(asks[-1])) >= 2:
+        return asks[-1]
+    return question
+
+
+GENERIC = set("""what whats what's where wheres where's when how who which why is are am do does did should
+could would can will i i'm im me my you your it its it's the a an to of for in on at now here there this that
+then so please hey meta muse ok okay""".split())
+
+
+def content_words(text: str) -> list[str]:
+    return [w for w in re.findall(r"[a-z']+", text.lower()) if w not in GENERIC]
 
 
 def label_day(fact: str, today: date) -> str:

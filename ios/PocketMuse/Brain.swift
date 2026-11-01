@@ -176,7 +176,34 @@ actor Brain {
         parts.append(String(s[last...]))
         parts = parts.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
         let asks = parts.filter { $0.hasSuffix("?") }
-        return parts.count > 1 && !asks.isEmpty ? asks.last! : q
+        // "I saw a rattlesnake. What should I do?": a generic ask carries no topic, so keep the whole question.
+        if parts.count > 1, let ask = asks.last, contentWords(ask) >= 2 { return ask }
+        return q
+    }
+
+    /// Mirrors pocketmuse.pack.GENERIC / content_words.
+    static let generic = Set("""
+        what whats what's where wheres where's when how who which why is are am do does did should
+        could would can will i i'm im me my you your it its it's the a an to of for in on at now here there this that
+        then so please hey meta muse ok okay
+        """.split(whereSeparator: \.isWhitespace).map(String.init))
+
+    static func contentWords(_ text: String) -> Int {
+        let words = text.lowercased().split { !($0.isLetter || $0 == "'") }.map(String.init)
+        return words.filter { !generic.contains($0) }.count
+    }
+
+    /// Names from this pack (Brandywine, Anteatery, Met…) so speech recognition spells them right.
+    func vocabulary() -> [String] {
+        guard let pack else { return [] }
+        let text = (pack.cards.map(\.title) + pack.cards.flatMap(\.facts)).joined(separator: " ")
+        var seen = Set<String>()
+        var out: [String] = []
+        for w in text.split(whereSeparator: { !($0.isLetter || $0 == "'") }).map(String.init)
+        where w.count > 2 && w.first!.isUppercase && !Self.generic.contains(w.lowercased()) {
+            if seen.insert(w).inserted { out.append(w) }
+        }
+        return Array(out.prefix(100))
     }
 
     static func labelDay(_ fact: String, today: Date) -> String {

@@ -44,6 +44,8 @@ final class Voice: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     @Published var wakeEnabled = true
     /// Self-test: don't speak aloud and don't reopen the mic after an answer.
     var testMode = false
+    /// Place and venue names from the active pack, so recognition hears "the Met", not "the mat".
+    var vocabulary: [String] = []
 
     var onQuestion: ((String) -> Void)?
     /// Self-test: called when a recorded question has been fully played in (the "user" stops talking).
@@ -132,7 +134,7 @@ final class Voice: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         req.shouldReportPartialResults = true
         req.requiresOnDeviceRecognition = recognizer.supportsOnDeviceRecognition
         req.addsPunctuation = true
-        req.contextualStrings = ["Hey Meta", "Hey Muse", "emergency kit", "lifeguard", "kayak", "coyote"]
+        req.contextualStrings = ["Hey Meta", "Hey Muse"] + vocabulary
         request = req
         wakeEnd = nil
         gotFinal = false
