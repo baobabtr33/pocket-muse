@@ -1,0 +1,7 @@
+Bundle/
+Secrets.xcconfig
+.spm/
+build/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+build.log

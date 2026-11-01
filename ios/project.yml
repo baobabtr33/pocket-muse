@@ -1,0 +1,45 @@
+name: PocketMuse
+options:
+  bundleIdPrefix: com.baobabtr33
+  deploymentTarget:
+    iOS: "18.0"
+configFiles:
+  Debug: Config.xcconfig
+  Release: Config.xcconfig
+packages:
+  MLXSwiftLM:
+    url: https://github.com/ml-explore/mlx-swift-lm
+    exactVersion: 2.31.3
+targets:
+  PocketMuse:
+    type: application
+    platform: iOS
+    sources:
+      - path: PocketMuse
+      - path: Bundle
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: MLXSwiftLM
+        product: MLXLLM
+      - package: MLXSwiftLM
+        product: MLXLMCommon
+      - package: MLXSwiftLM
+        product: MLXEmbedders
+    info:
+      path: PocketMuse/Info.plist
+      properties:
+        CFBundleDisplayName: Pocket Muse
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIBackgroundModes: [audio]
+        NSMicrophoneUsageDescription: Pocket Muse listens through your glasses or phone microphone for your questions.
+        NSSpeechRecognitionUsageDescription: Pocket Muse turns your questions into text on this phone, with no network needed.
+        BasetenKey: $(BASETEN_KEY)
+    settings:
+      base:
+        DEVELOPMENT_TEAM: 8B424TRX73
+        PRODUCT_BUNDLE_IDENTIFIER: com.baobabtr33.pocketmuse
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic

@@ -1,0 +1,4 @@
+// Optional: put BASETEN_KEY = <your key> in Secrets.xcconfig (gitignored) so off-pack questions
+// go to big Muse when online. Without it, they're queued.
+BASETEN_KEY =
+#include? "Secrets.xcconfig"
