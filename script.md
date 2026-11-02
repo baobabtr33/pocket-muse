@@ -13,10 +13,11 @@ Length: about 3 minutes. Film through the glasses where you can; show the phone 
 
 ## Before filming
 
-- [ ] Rebuild the pack the day before, so the forecast and sunset are fresh: `uv run python pack.py --scenario oc`.
-- [ ] Mac check: `uv run python eval.py --scenarios`. The `oc` day should pass.
+- [ ] Rebuild the pack on the filming day (or the night before), so "today", the library hours, the forecast and the sunset match the day: `uv run python pack.py --scenario oc` (about 7 minutes). The current pack was built for Sunday, Nov 1.
+- [ ] Rebuilds vary. After each one, check that the rip-current and lunch answers still match the Expect lines below; those two are written out in `data/oc.md` so Muse copies them.
+- [ ] Mac check: `uv run python eval.py --scenarios`. The `oc` day should pass 12 of 13 (the pizza poem is a known miss; the script doesn't use it).
 - [ ] Install: `ios/run.sh --export`. Pick **Orange County day** on the Muse tab.
-- [ ] Phone self-test: set Auto-Lock to Never, then `.claude/skills/verify-pocket-muse/scripts/pm.sh selftest`. Read what it *heard* as well as what it answered.
+- [ ] Phone self-test: set Auto-Lock to Never, then `.claude/skills/verify-pocket-muse/scripts/pm.sh selftest`. The `oc` day runs first. Read what it *heard* as well as what it answered. Last result (2026-11-01): 12 of 13 by voice, about 1 second per answer.
 - [ ] Turn off "Hey Meta" in the Meta AI app, so the glasses' own assistant doesn't answer too.
 - [ ] Turn on airplane mode (or "Simulate no signal" in Settings) for every offline scene.
 
@@ -64,7 +65,7 @@ Careful. This prototype builds the pack through Baseten's API, not Private Proce
 
 **Ask, standing at the water:** "Hey Meta, I'm getting pulled out by the water, what do I do?"
 
-**Expect:** Don't fight the current, swim parallel to shore, then wave for a lifeguard.
+**Expect:** "Don't fight it. Swim parallel to shore until you're out of the pull, then swim back at an angle."
 
 **Ask:** "Hey Meta, where are the fire pits?"
 
@@ -84,7 +85,7 @@ Careful. This prototype builds the pack through Baseten's API, not Private Proce
 
 **Show:** the app's Pack tab, then the How tab.
 
-**Say:** "Muse Spark wrote safety cards first, explained why, and wrote about 450 practice questions for about a quarter. Llama 3.2 1B learned them as a 23 megabyte add-on."
+**Say:** "Muse Spark wrote safety cards first, explained why, and wrote about 480 practice questions in a minute, for under 30 cents. Llama 3.2 1B learned them in about 5 minutes on a laptop, as a 23 megabyte add-on."
 
 **Why distill, not paste the pack in? One number:** the same 1B model with the whole pack in its prompt and no training passed 13 of 35 spoken tests. It refused facts that were right in front of it and wrote a pizza poem anyway. After Muse taught it, 32 of 35.
 
