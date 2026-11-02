@@ -19,7 +19,7 @@ Area for weather: Irvine, CA
 ## Crystal Cove State Park (parks.ca.gov/CrystalCove)
 - Address: 8471 North Coast Highway, Laguna Beach, CA 92651, on Pacific Coast Highway between Corona del Mar and Laguna Beach. Park phone: (949) 494-3539.
 - Day-use areas open 6am to sunset. The Historic District is open 6am to 10pm.
-- Parking per vehicle: Los Trancos lot $5 per hour; other lots $15 per day, or $20 per day on holidays and summer weekends.
+- Parking at Crystal Cove costs $5 per hour at the Los Trancos lot, or $15 per day at the other lots ($20 per day on holidays and summer weekends).
 - From the Los Trancos lot (inland side of Pacific Coast Highway), walk the half-mile nature trail through the tunnel under the highway to the Historic District, or take the shuttle. The visitor center cottage explains the 36 historic cottages (1935 to 1955).
 - Food: the Beachcomber Cafe (in the Historic District, steps from the sand) and the Crystal Cove Shake Shack.
 - 3.2 miles of beach in seven coves. Offshore is a marine conservation area.

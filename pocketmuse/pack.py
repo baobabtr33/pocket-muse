@@ -12,7 +12,7 @@ from .config import DEFAULT_STUDENT, PACKS_DIR, STUDENTS, format_card
 
 def list_packs() -> list[Path]:
     packs = [p.parent for p in PACKS_DIR.glob("*/pack.json") if (p.parent / "adapters").exists()]
-    return sorted(packs, key=lambda p: p.stat().st_mtime, reverse=True)
+    return sorted(packs, key=lambda p: (p / "pack.json").stat().st_mtime, reverse=True)  # a rebuild can reuse a folder
 
 
 def resolve(name: str | None) -> Path:
