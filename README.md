@@ -1,24 +1,50 @@
 # Pocket Muse
 
-**Muse thinks ahead for you.**
+**Your AI packs before you do.**
 
-Tell Muse what your day looks like. Ahead of time, it works out the questions you're likely to ask, starting with safety, and teaches a small model on your device to answer them. When the moment comes, the answer is instant, private and free, and it still works with no signal.
+[Watch the 3-minute demo](https://youtu.be/zVn9xjb9PvE)
 
-## A day with Pocket Muse
+Pocket Muse is an AI assistant that works with no signal. You often need help most when you have none: on a trail, at the beach, on a plane, or abroad.
 
-This is the stage demo. Every answer below is a real, measured run on a MacBook (M4 Pro).
+The night before, you tell Pocket Muse your plans. Muse Spark, Meta's large model, predicts what you will need and teaches Llama 3.2 1B on your phone to answer it. The next day you ask through your Ray-Ban Meta glasses, and the phone answers in about a second, with no network and no cost. If a question isn't covered, Pocket Muse doesn't guess. It saves the question and asks Muse when you're back online.
 
-| | Moment | What answers | Result |
-|---|---|---|---|
-| 1 | **Studying in the library.** On the laptop: *"Explain eigenvalues, I don't get it."* | Big Muse in the cloud (Muse Spark Open), because there's signal and the question is open-ended | A plain-language explanation with a 2x2 example. 2.25s, about $0.003 |
-| 2 | **Done with work, glasses on, no signal.** *"Hey Meta, what's the menu for lunch?"* | Pocket Muse, Llama 3.2 1B on the device | Margherita pizza, grilled chicken Caesar salad, and vegetable stir-fry with tofu (vegan). 0.71s, $0 |
-| 3 | **At lunch.** Filmed through the glasses. | | |
-| 4 | **After school, at the beach.** *"Hey Meta, I'm not getting any signal. Do you know where the closest emergency kit is?"* | Pocket Muse, on the device | The emergency kit, with an AED, is inside Lifeguard Tower 2 at the bottom of the Shore Path stairs. 0.72s, $0 |
-| 5 | **How it works.** | The pack's own build record | Muse wrote 5 safety cards, 4 cards for the day and a forecast, then 304 practice Q&A in 31s (about $0.15). Llama 3.2 1B trained on them for 5 minutes, producing a 23 MB adapter. |
+| 1. Plan | 2. Pack | 3. Go |
+|---|---|---|
+| Tell Muse about your day | Muse writes notes and teaches the small model | Ask with no signal; the phone answers |
 
-The lunch menu and the kit location aren't things a model can know. They come from a short notes file ([`data/today.md`](data/today.md)) that Muse turns into the pack, word for word. Muse is told never to invent a menu or a kit location.
+The pack has two parts:
 
-See [`IDEAS.md`](IDEAS.md) for the pitch, and [`script.md`](script.md) for the filming script of the Orange County day (Newport Beach library, UC Irvine, Crystal Cove, Huntington Beach; pack `oc`, notes in `data/oc.md`, 12 of 13 spoken tests on the Mac).
+- **Knowledge pack (retrieval).** Hours, places, prices, the forecast and safety steps, saved as text. The 4 most relevant facts go into the prompt with each question.
+- **Skill pack (LoRA adapter, 23 MB).** Teaches the small model how to use those facts: answer from the notes, keep it short, safety steps first, and say "That's not in your pack" instead of guessing.
+
+## Results at a glance
+
+- **On a real iPhone:** 45 of 48 spoken test questions passed across 5 days, about 1 second per answer, with no network (phone self-test, 2026-11-02). The Orange County day from the video passed 13 of 13.
+- **Distillation matters:** on the same 35 questions, untrained Llama 3.2 1B passes 11 with the retrieved notes, and 13 with the whole pack pasted into its prompt. After Muse's training it passes 32. [Details](#why-distill-couldnt-the-phone-just-read-the-pack)
+- **Cheap and fast to build:** about $0.26 of Muse tokens and about 6 minutes of training on a MacBook for one day's pack.
+
+## Meta products used
+
+| Product | Role |
+|---|---|
+| Muse Spark Open (via Baseten) | The teacher. Plans the day, writes the notes and about 500 practice questions, safety first. Answers off-pack questions when online. |
+| Llama 3.2 1B Instruct | The student. Fine-tuned with LoRA, then runs fully on the iPhone with MLX Swift. |
+| Ray-Ban Meta glasses | The interface. Used as a Bluetooth headset: hold to talk, hear the answer in the glasses. |
+
+## The demo day: Orange County
+
+The video follows one day: studying at the Newport Beach Central Library, class and lunch at UC Irvine, tide pools at Crystal Cove, and a bonfire at Huntington Beach. The facts come from official pages, written into [`data/oc.md`](data/oc.md). Muse turns them into the pack word for word and never invents hours or prices. Answers below are from the Mac check on 2026-11-02 (`uv run python eval.py --scenarios --only oc`, 12 of 13 passed).
+
+| Question (no signal) | Pocket Muse's answer, on the device |
+|---|---|
+| "Hey Meta, what time does the library close today?" | Monday to Thursday 9am to 9pm; Friday and Saturday 9am to 6pm; Sunday 12 noon to 5pm. |
+| "Hey Meta, where can I get lunch on campus and when is it open?" | The Anteatery (Mesa Court) and Brandywine (Middle Earth) serve lunch 11:30am to 2:00pm. |
+| "Hey Meta, can I take a shell home from the tide pools?" | Look but don't touch: collecting shells, rocks or anything natural is prohibited by law. |
+| "Hey Meta, I'm getting pulled out by the water, what do I do?" | Don't fight it. Swim parallel to shore until you're out of the pull, then swim back to shore at an angle. |
+| "Hey Meta, where are the fire pits?" | There are 127 fire pits from south of First Street to Beach Blvd. |
+| "What's the score of the Lakers game?" | That's not in your pack, so I won't guess. I'll ask Muse when you're online. |
+
+Each answer took 0.3 to 0.7 seconds on a MacBook (M4 Pro). See [`script.md`](script.md) for the filming script and [`IDEAS.md`](IDEAS.md) for the pitch.
 
 ## How it's developed
 
@@ -28,7 +54,7 @@ Big Muse is the teacher, Llama is the student, and the student lives on your dev
 2. **Forecast.** A real forecast for the area from [Open-Meteo](https://open-meteo.com) (no key needed), saved with the time it was fetched.
 3. **Teach.** Muse writes practice questions and answers for every card in parallel, 1.5x as many for safety cards. It also writes questions the pack can't answer, so the student learns to say "That's not in your pack" instead of guessing.
 4. **Distill.** A LoRA fine-tune of Llama 3.2 1B Instruct (or 3B) with MLX, fused into one small model.
-5. **Answer in the moment.** A semantic router decides whether a question belongs on the device or with big Muse. On-device answers get the 4 most relevant pack facts in the prompt, the same retrieval the model was trained on. Questions the pack doesn't cover go to big Muse when online, and are queued for later when not.
+5. **Answer in the moment.** A semantic router decides whether a question belongs on the device or with big Muse. On-device answers get the 4 most relevant pack facts in the prompt, the same retrieval the model was trained on. Questions the pack doesn't cover go to big Muse when online, and are queued for later when not. The phone runs the same two gates: Gate 1 (intent) compares the question with the pack's own questions and with general/live ones, and only clearly anticipated questions reach Llama; Gate 2 (grounding) is the student saying "That's not in your pack" when its notes don't answer.
 
 ```
 $ uv run python pack.py --demo
@@ -59,6 +85,7 @@ All Meta open models, except the embedder.
 | Student ("Pocket Muse") | Llama 3.2 1B Instruct (default) or 3B, LoRA and fused, via MLX | On the device |
 | Router and retrieval | BAAI/bge-small-en-v1.5 | On the device, CPU |
 | Forecast | Open-Meteo API | Fetched while online |
+| Glasses | Ray-Ban Meta, used as a Bluetooth headset (microphone and speaker, HFP); no glasses SDK | Paired with the phone |
 
 ## Measured results
 
@@ -81,7 +108,7 @@ That pack cost about $0.27 of Muse tokens (tokens × list price) and about 6 min
 
 ### Why distill? Couldn't the phone just read the pack?
 
-The pack is small (900 to 2,800 tokens), so the obvious alternative to training is to skip it and put the pack in the prompt when the phone goes offline. We tested that. Same phone model (Llama 3.2 1B, 8-bit), same 35 spoken-test questions from `data/scenarios.json` as text, same pass rule as the phone's self-test:
+The pack is small (900 to 2,800 tokens), so the obvious alternative to training is to skip it and put the pack in the prompt when the phone goes offline. That was tested with the same phone model (Llama 3.2 1B, 8-bit), same 35 spoken-test questions from `data/scenarios.json` as text, same pass rule as the phone's self-test:
 
 | Setup | Passed |
 |---|---|
@@ -100,6 +127,21 @@ uv run python eval.py --scenarios                 # student (what the phone runs
 uv run python eval.py --scenarios --setup rag     # untuned base + retrieved notes
 uv run python eval.py --scenarios --setup full    # untuned base + whole pack in the prompt
 ```
+
+### Lean vs rich packs
+
+Same Orange County day, two notes files (`data/oc-lean.md`, `data/oc-rich.md`; calendar, habits, Lakers scores and conference program are labeled test fixtures). Lean holds the calendar, personal patterns, repeated questions, safety and static logistics. Rich adds a game-score snapshot, background on each place and activity, and the conference program. Both trained 200 steps; `uv run python eval.py --scenarios --only oc-lean,oc-rich` (2026-11-02):
+
+| | Lean | Rich |
+|---|---|---|
+| Cards (safety) / facts | 10 (3) / 38 | 24 (8) / 87 |
+| Muse tokens, cost (est.) | 7.1k in + 30.5k out, $0.14 | 15.4k in + 70.3k out, $0.32 |
+| Practice Q&A, training | 262, 264 s | 621, 286 s |
+| Adapter | 22.6 MB | 22.6 MB |
+| 8 shared day questions | 8/8 | 7/8 (rip current answer left out "swim parallel") |
+| 5 rich-only questions | 5/5 refused | 5/5 answered |
+
+The adapter's size is set by the LoRA rank, not the pack. The rich pack covers more, but at the same 200 steps it trains about 1.3 passes over its data instead of 3, and its one miss was the safety answer. Lean also answered "swim parallel" when that line wasn't in its retrieved notes, so the adapter does memorize some heavily practiced facts.
 
 ### 1B vs 3B
 
@@ -146,7 +188,7 @@ What's real and what's acted: every answer is produced live on the laptop, with 
 
 ### iPhone app with the glasses
 
-The same pack runs on an iPhone (`ios/`): Llama 3.2 1B (8-bit) and fact retrieval via MLX Swift, on-device speech recognition, and spoken answers, all with no signal. It listens through the Ray-Ban Meta microphone over Bluetooth and answers through the glasses.
+The same pack runs on an iPhone (`ios/`): Llama 3.2 1B (8-bit) and fact retrieval via MLX Swift, on-device speech recognition, and spoken answers, all with no signal. It listens through the Ray-Ban Meta microphone over Bluetooth while you hold the button, and answers through the glasses.
 
 ```bash
 uv run python export_ios.py   # quantize the latest pack's model and copy the embedder into ios/Bundle
@@ -155,7 +197,7 @@ ios/run.sh                    # build, install and launch on the connected iPhon
 
 Before the demo:
 
-- In the Meta AI app, turn off "Hey Meta" so the glasses' own assistant doesn't answer too. The app listens for "Hey Meta" or "Hey Muse".
+- In the Meta AI app, turn off "Hey Meta" so the glasses' own assistant doesn't answer too. In Pocket Muse, hold "Hold to talk", ask, and let go. Saying "Hey Meta" first is fine; it's ignored.
 - On the iPhone, download a Premium voice: Settings > Accessibility > Read & Speak (or Spoken Content) > Voices > English > Ava (Premium). Without it, iOS uses its robotic default voice. Check it in the app's settings (Muse voice: "Ava · Premium").
 - Optional: put `BASETEN_KEY = <key>` in `ios/Secrets.xcconfig` (gitignored) so off-pack questions go to big Muse when online.
 - The scene menu (bottom left) runs each stage question with one tap, as a backup to voice.
