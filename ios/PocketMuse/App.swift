@@ -166,7 +166,7 @@ final class AppModel: ObservableObject {
     // MARK: Self-test: a simulated user speaking to the glasses
 
     /// For every pack: plays each recorded question (macOS `say`) through the real capture path
-    /// (wake word for "Hey Meta…" questions, hold-to-talk otherwise), with no signal, and checks the answer.
+    /// (hold to talk, released once the recording ends), with no signal, and checks the answer.
     func selfTest(exitWhenDone: Bool = false) async {
         guard !testing else { return }
         setvbuf(stdout, nil, _IOLBF, 0)  // line-buffer so `devicectl --console` sees each result as it lands
@@ -187,7 +187,7 @@ final class AppModel: ObservableObject {
                 let expect = item["expect"] ?? ""
                 let url = dir.appending(component: "\(i).wav")
                 let t0 = Date()
-                let turn = await speakAsUser(url, wake: Wake.end(in: spoken) != nil)
+                let turn = await speakAsUser(url)
                 let r = TestResult(pack: entry.name, spoken: spoken, heard: voice.transcript,
                                    answer: turn?.answer ?? "(no answer: \(voice.notice ?? "timeout"))",
                                    source: turn?.source, seconds: turn?.seconds ?? Date().timeIntervalSince(t0),
@@ -208,24 +208,19 @@ final class AppModel: ObservableObject {
         voice.cancel()
     }
 
-    private func speakAsUser(_ url: URL, wake: Bool) async -> Turn? {
+    private func speakAsUser(_ url: URL) async -> Turn? {
         let seconds = (try? AVAudioFile(forReading: url)).map { Double($0.length) / $0.processingFormat.sampleRate } ?? 3
         let id = UUID()
         waiterID = id
         return await withCheckedContinuation { (c: CheckedContinuation<Turn?, Never>) in
             turnWaiter = c
-            if wake {
-                voice.onFileSpoken = nil
-                voice.listen(source: .file(url))  // waits for "Hey Meta", ends on the pause after the question
-            } else {
-                voice.onFileSpoken = { [weak self] in  // done talking: let go of the button shortly after
-                    Task { @MainActor in
-                        try? await Task.sleep(for: .milliseconds(400))
-                        if self?.waiterID == id { self?.voice.holdEnded() }
-                    }
+            voice.onFileSpoken = { [weak self] in  // done talking: let go of the button shortly after
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(400))
+                    if self?.waiterID == id { self?.voice.holdEnded() }
                 }
-                voice.holdBegan(source: .file(url))
             }
+            voice.holdBegan(source: .file(url))
             Task {  // give up on this question (only this one) if no answer comes
                 try? await Task.sleep(for: .seconds(seconds * 2 + 15))
                 if waiterID == id, let w = turnWaiter { turnWaiter = nil; w.resume(returning: nil) }

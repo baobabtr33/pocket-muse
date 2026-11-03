@@ -5,9 +5,9 @@ description: Drive and prove Pocket Muse on the real iPhone (the iOS app that an
 
 # Verify Pocket Muse
 
-Pocket Muse has two surfaces. The **iPhone app** (`ios/`) is what the user touches on stage: it listens (wake word "Hey Meta"/"Hey Muse" or hold-to-talk), answers on-device, and speaks. The **Mac CLI** (`pack.py`, `demo.py`, `eval.py`, `export_ios.py`) builds the packs the app ships. The helper `scripts/pm.sh` drives both. Paths below are relative to the repo root.
+Pocket Muse has two surfaces. The **iPhone app** (`ios/`) is what the user touches on stage: it listens while "Hold to talk" is held, answers on-device, and speaks. The **Mac CLI** (`pack.py`, `demo.py`, `eval.py`, `export_ios.py`) builds the packs the app ships. The helper `scripts/pm.sh` drives both. Paths below are relative to the repo root.
 
-The phone has no UI automation. Its programmatic driver is the app's **self-test**: launched with `-selftest`, it switches to every pack, plays recorded questions (macOS `say`, exported per scenario) through the same speech recognizer, wake-word and hold-to-talk code as a real voice, with no signal, checks each answer, prints `SELFTEST` lines and writes `Documents/selftest.json`, then exits. Anything only a finger can do (tabs, menus, the stop button) is a manual step for the human; say so rather than claiming it.
+The phone has no UI automation. Its programmatic driver is the app's **self-test**: launched with `-selftest`, it switches to every pack, plays recorded questions (macOS `say`, exported per scenario) through the same speech recognizer and hold-to-talk code as a real voice, with no signal, checks each answer, prints `SELFTEST` lines and writes `Documents/selftest.json`, then exits. Anything only a finger can do (tabs, menus, the stop-speaking button) is a manual step for the human; say so rather than claiming it.
 
 ## Launch
 
@@ -42,7 +42,7 @@ Everything goes to `artifacts/verify/<RUN>/` (gitignored; `stop` never touches i
 
 Proof standards:
 
-- A pass is the real path: recorded speech through the recognizer, wake word or hold release, retrieval, on-device generation. Calling `AppModel.ask` with text is not voice proof.
+- A pass is the real path: recorded speech through the recognizer, hold release, retrieval, on-device generation. Calling `AppModel.ask` with text is not voice proof.
 - Report what was heard as well as the answer: a wrong answer from a mis-heard question is a speech bug, not a model bug.
 - "On-device" claims need `source` = `device`. The self-test forces no signal, so a pass never used the cloud.
 - A self-test against an old install proves the old code. If doctor warns the source is newer, rebuild first or say the result is for the previous build.

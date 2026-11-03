@@ -70,21 +70,12 @@ enum Bundled {
 enum Wake {
     static let leading = try! NSRegularExpression(
         pattern: #"^\s*(hey|hi|ok|okay)[\s,]+(meta|muse)[\s,.!:?]*"#, options: [.caseInsensitive])
-    static let anywhere = try! NSRegularExpression(
-        pattern: #"\b(hey|hi|ok|okay)[\s,]+(meta|muse)\b[\s,.!:?]*"#, options: [.caseInsensitive])
 
     static func strip(_ text: String) -> String {
         let out = leading.stringByReplacingMatches(
             in: text, range: NSRange(text.startIndex..., in: text), withTemplate: ""
         ).trimmingCharacters(in: .whitespaces)
         return out.isEmpty ? text : out
-    }
-
-    /// Where the wake phrase ends inside a running transcript, if it was said.
-    static func end(in text: String) -> String.Index? {
-        let ns = NSRange(text.startIndex..., in: text)
-        guard let m = anywhere.matches(in: text, range: ns).last, let r = Range(m.range, in: text) else { return nil }
-        return r.upperBound
     }
 }
 

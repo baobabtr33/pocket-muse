@@ -23,7 +23,7 @@ The maintained source for verifying what a Pocket Muse user can do. Read this in
 
 ## Features
 
-- [ask-by-voice.md](ask-by-voice.md): wake word and hold-to-talk, answered on-device.
+- [ask-by-voice.md](ask-by-voice.md): hold-to-talk, answered on-device.
 - [no-signal-fallback.md](no-signal-fallback.md): off-pack questions queued with no signal, sent to big Muse online.
 - [switch-day.md](switch-day.md): switching between school, trip and city packs.
 - [pack-and-reasons.md](pack-and-reasons.md): Pack tab, Muse's reasoning, learned Q&A, "Why this answer".

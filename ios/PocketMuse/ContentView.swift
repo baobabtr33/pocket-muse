@@ -86,7 +86,7 @@ struct MuseView: View {
         if app.answering { return "Thinking" }
         switch voice.phase {
         case .off: return "Microphone off"
-        case .waiting: return voice.wakeEnabled ? "Say “Hey Meta…” or hold to talk" : "Hold to talk"
+        case .waiting: return "Hold to talk"
         case .hearing: return "Listening"
         case .busy: return "Thinking"
         case .speaking: return "Speaking"
@@ -130,9 +130,13 @@ struct MuseView: View {
 
             HoldButton(enabled: app.ready && !app.answering && !app.testing)
 
-            Button { voice.cancel() } label: { CircleIcon(name: "stop.fill") }
-                .tint(.white)
-                .accessibilityLabel("Stop")
+            if voice.phase == .speaking {  // the only thing to stop: Muse talking
+                Button { voice.cancel() } label: { CircleIcon(name: "speaker.slash.fill") }
+                    .tint(.white)
+                    .accessibilityLabel("Stop speaking")
+            } else {
+                Color.clear.frame(width: 54, height: 54)
+            }
         }
         .padding(.bottom, 8)
     }
@@ -472,7 +476,7 @@ struct HowView: View {
                 } header: {
                     Text("Self-test")
                 } footer: {
-                    Text("Plays recorded questions through the same speech recognition, wake word and hold-to-talk "
+                    Text("Plays recorded questions through the same hold-to-talk speech recognition "
                         + "path as your voice, for every pack, and checks each answer.")
                 }
             }
@@ -525,7 +529,6 @@ struct SettingsSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Toggle("Wake word (“Hey Meta” / “Hey Muse”)", isOn: $voice.wakeEnabled)
                     Toggle("Simulate no signal", isOn: $app.simulateNoSignal)
                     Toggle("Speak big Muse answers", isOn: $app.speakCloud)
                 } footer: {
