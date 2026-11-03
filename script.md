@@ -13,7 +13,7 @@ Length: about 3 minutes. Film through the glasses where you can; show the phone 
 
 ## Before filming
 
-- [ ] Rebuild the pack on the filming day (or the night before), so "today", the library hours, the forecast and the sunset match the day: `uv run python pack.py --scenario oc` (about 7 minutes). The current pack was built for Sunday, Nov 1.
+- [ ] Rebuild the pack on the filming day (or the night before), so "today", the library hours, the forecast and the sunset match the day: `uv run python pack.py --scenario oc` (about 7 minutes). The current pack was built Monday night, Nov 2, for Tuesday, Nov 3 (plan says "Tomorrow I'm…"; sunset 4:57 PM).
 - [ ] Rebuilds vary. After each one, check that the rip-current and lunch answers still match the Expect lines below; those two are written out in `data/oc.md` so Muse copies them.
 - [ ] Mac check: `uv run python eval.py --scenarios`. The `oc` day should pass 12 of 13 (the pizza poem is a known miss; the script doesn't use it).
 - [ ] Install: `ios/run.sh --export`. Pick **Orange County day** on the Muse tab.

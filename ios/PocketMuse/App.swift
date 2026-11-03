@@ -148,6 +148,10 @@ final class AppModel: ObservableObject {
         turnWaiter = nil
     }
 
+    func delete(_ id: UUID) {
+        withAnimation { turns.removeAll { $0.id == id } }
+    }
+
     /// Send queued questions to big Muse once there's signal.
     func sync() async {
         guard online, Cloud.key != nil else { return }

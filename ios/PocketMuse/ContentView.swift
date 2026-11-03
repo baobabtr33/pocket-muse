@@ -94,17 +94,29 @@ struct MuseView: View {
     }
 
     private var conversation: some View {
-        ScrollView {
-            LazyVStack(spacing: 10) {
-                if app.turns.isEmpty {
-                    Text("Ask about your day. Anything in your pack is answered on this phone, even with no signal. "
-                        + "Tap a card's “Why this answer” to see what it used.")
-                        .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                        .padding(.top, 16)
-                }
-                ForEach(app.turns) { TurnCard(turn: $0) }
+        List {
+            if app.turns.isEmpty {
+                Text("Ask about your day. Anything in your pack is answered on this phone, even with no signal. "
+                    + "Tap a card's “Why this answer” to see what it used.")
+                    .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 16)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+            ForEach(app.turns) { t in
+                TurnCard(turn: t)
+                    .buttonStyle(.borderless)
+                    .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) { app.delete(t.id) } label: { Label("Delete", systemImage: "trash") }
+                    }
             }
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
     }
 
@@ -144,6 +156,7 @@ struct MuseView: View {
 
 struct PackPicker: View {
     @EnvironmentObject var app: AppModel
+    var compact = false  // toolbar: the nav title already names the pack, and long text overflows the bar
     var body: some View {
         Menu {
             ForEach(app.packs) { p in
@@ -152,11 +165,15 @@ struct PackPicker: View {
                 }
             }
         } label: {
-            HStack(spacing: 4) {
-                Text(app.pack.map { "\($0.name) · \($0.title)" } ?? "Loading…").lineLimit(1)
-                Image(systemName: "chevron.down").font(.caption2)
+            if compact {
+                Label("Switch pack", systemImage: "arrow.left.arrow.right")
+            } else {
+                HStack(spacing: 4) {
+                    Text(app.pack.map { "\($0.name) · \($0.title)" } ?? "Loading…").lineLimit(1)
+                    Image(systemName: "chevron.down").font(.caption2)
+                }
+                .font(.footnote).foregroundStyle(.secondary)
             }
-            .font(.footnote).foregroundStyle(.secondary)
         }
     }
 }
@@ -347,7 +364,7 @@ struct PackView: View {
             }
             .searchable(text: $search, prompt: "Search learned questions")
             .navigationTitle(app.pack?.name ?? "Pack")
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { PackPicker() } }
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { PackPicker(compact: true) } }
         }
     }
 
